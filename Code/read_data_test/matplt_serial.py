@@ -49,7 +49,7 @@ ser = serial.Serial('/dev/ttyUSB0', 57600)
 fig, ax = plt.subplots()
 scope = Scope(ax)
 
-ani = animation.FuncAnimation(fig, scope.update, serial_read, interval=0,
+ani = animation.FuncAnimation(fig, scope.update, serial_read, save_count=1000, interval=0,
                               blit=True)
 
 plt.show()
