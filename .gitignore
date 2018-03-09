@@ -52,6 +52,16 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+#workspace
+.cproject
+.dep/
+.project
+.idea/
+.mxproject
+.settings/
+Debug/
+Release/
+
 
 
 # Python 
@@ -171,3 +181,6 @@ venv.bak/
 *.ipynd_checkpoints
 *checkpoint.ipynb
 *.csv
+*.plt
+*.fft
+
