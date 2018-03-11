@@ -57,12 +57,14 @@ DMA_HandleTypeDef hdma_usart1_rx;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define ADC_VAL_SIZE		256
+#define ADC_VAL_SIZE		512
+#define ADC_VAL_HALF_SIZE 	ADC_VAL_SIZE/2
 #define UART_RX_BUFFER_SIZE	256
 #define END_OF_MESSAGE_CHAR	'\n'
 
 __IO uint16_t adc_val[ADC_VAL_SIZE] ={0};
 __IO uint8_t print = 0;
+__IO uint16_t adc_array_offset = 0;
 
 uint8_t rx_buffer[UART_RX_BUFFER_SIZE] ={0};
 circle_buff_s rx_control ={
@@ -148,9 +150,8 @@ int main(void)
   {
 	  if(print)
 	  {
-		  split_data((uint16_t*)&adc_val, ADC_VAL_SIZE,(uint8_t*) &adc_val_ds, dfactor);
-		  HAL_Status_Check(HAL_ADC_Start_DMA(&hadc1,(uint32_t*) &adc_val, ADC_VAL_SIZE));
-		  HAL_print_number((uint8_t*)&adc_val_ds, ADC_VAL_SIZE*2/dfactor);
+		  split_data((uint16_t*)(&adc_val)+adc_array_offset, ADC_VAL_HALF_SIZE,(uint8_t*) &adc_val_ds, dfactor);
+		  HAL_print_number((uint8_t*)&adc_val_ds, ADC_VAL_HALF_SIZE*2/dfactor);
 		  print = 0;
 	  }
   /* USER CODE END WHILE */
@@ -412,9 +413,17 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc)
+{
+	print = 1;
+	adc_array_offset = 0;
+}
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef * hadc)
 {
 	print = 1;
+	adc_array_offset = ADC_VAL_HALF_SIZE;
+	HAL_Status_Check(HAL_ADC_Start_DMA(&hadc1,(uint32_t*) &adc_val, ADC_VAL_SIZE));
 }
 
 /**
