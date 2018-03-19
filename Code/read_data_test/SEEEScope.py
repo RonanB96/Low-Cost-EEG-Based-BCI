@@ -60,7 +60,7 @@ class SEEEScope:
         print('OK')
 
         # Open data log file
-        self.filename = time.ctime() + '.csv'
+        self.filename = '/home/ronan/Documents/EEG_csv/' + time.ctime() + '.csv'
         self.filename = self.filename.replace(':','-') #colon not allowed in windows codename
         sys.stdout.write('Opening data log file ' + self.filename + ' ...')
         sys.stdout.flush()

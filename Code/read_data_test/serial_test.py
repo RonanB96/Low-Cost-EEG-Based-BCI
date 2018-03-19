@@ -7,7 +7,7 @@ N = 2000
 serial_buff = np.zeros(N, dtype='uint16')
 ser = serial.Serial('/dev/ttyUSB0', baudrate=57600, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
 
-filename = time.ctime() + '.csv'
+filename = '/home/ronan/Documents/EEG_csv/' + time.ctime() + '.csv'
 filename = filename.replace(':', '-')
 logfile = open(filename, 'w')
 if not logfile:
