@@ -3,10 +3,15 @@ import matplotlib.animation as animation
 import serial
 import threading
 from collections import deque
+import numpy as np
 
-data = deque(0 for _ in range(612))
+#data = deque(0 for _ in range(612))
+data = np.array(0)
+data.astype(int)
 sample_rate = 256
 frame_rate = sample_rate/4
+tail = 0
+head = frame_rate
 
 
 def stm32():
@@ -20,8 +25,9 @@ def stm32():
             hex_val1 = int(input_data[0:2], 16) << 8
             hex_val2 = int(input_data[2:4], 16)
             val = hex_val1 | hex_val2
-            data.append(val)
-            data.popleft()
+            np.append(data,val)
+            #data.append(val)
+            #data.popleft()
             #print(val)
         except ValueError:
             pass
@@ -36,15 +42,19 @@ if __name__ == "__main__":
 
 
     def animate(i):
-        global old_data
-        #if data != old_data:
-        plot_data.set_ydata(data)
+        global head, tail
+        if tail == sample_rate:
+            plt.show()
+            tail = 0
+            head = frame_rate
+        plot_data.set_ydata(data[tail:head])
         print(data)
-        plot_data.set_xdata(range(len(data)))
-        old_data = data
+        plot_data.set_xdata(range(frame_rate))
+        tail = tail+frame_rate
+        head = head+frame_rate
         return [plot_data]
 
 
     ani = animation.FuncAnimation(fig, animate, frames=range(1000),
-                                  interval=sample_rate, blit=True)
+                                  interval=frame_rate, blit=True)
     plt.show()
