@@ -12,8 +12,8 @@
 <targetDefinitions>
   <board id="nucleo-f303k8">
     <name>NUCLEO-F303K8</name>
-    <dbgIF>JTAG</dbgIF>
     <dbgIF>SWD</dbgIF>
+    <dbgIF>JTAG</dbgIF>
     <dbgDEV>ST-Link</dbgDEV>
     <mcuId>stm32f303k8tx</mcuId>
   </board>

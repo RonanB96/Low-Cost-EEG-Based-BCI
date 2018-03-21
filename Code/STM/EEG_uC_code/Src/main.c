@@ -57,14 +57,16 @@ DMA_HandleTypeDef hdma_usart1_rx;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define ADC_VAL_SIZE		512
-#define ADC_VAL_HALF_SIZE 	ADC_VAL_SIZE/2
-#define UART_RX_BUFFER_SIZE	256
-#define END_OF_MESSAGE_CHAR	'\n'
+#define ADC_BUFF_SIZE			512
+#define ADC_BUFF_HALF_SIZE 		ADC_BUFF_SIZE/2
+/* The offset is the size of adc array as this accounts for changing from 16bit to 8bit int */
+#define ADC_BUFF_OFFSET			ADC_BUFF_SIZE
+#define UART_RX_BUFFER_SIZE		256
+#define END_OF_MESSAGE_CHAR		'\n'
 
-__IO uint16_t adc_val[ADC_VAL_SIZE] ={0};
-__IO uint8_t print = 0;
+__IO uint16_t adc_val[ADC_BUFF_SIZE] ={0};
 __IO uint16_t adc_array_offset = 0;
+__IO uint8_t print = 0;
 
 uint8_t rx_buffer[UART_RX_BUFFER_SIZE] ={0};
 circle_buff_s rx_control ={
@@ -102,9 +104,6 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
-	DownFactor_e dfactor = DownFactor_1;
-	__IO uint8_t adc_val_ds[(uint16_t)(ADC_VAL_SIZE*2/dfactor)];
-
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -131,15 +130,20 @@ int main(void)
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
+  /* Enable interrupt on Byte in UART buffer */
   __HAL_UART_ENABLE_IT(&huart1, UART_IT_RXNE);
 
+  /* Workaround for asynchronous UART RX */
   huart1.pRxBuffPtr = rx_control.buffer;
   huart1.Mask = 0xFFU;
 
+  /* Calibrate ADC */
   HAL_Status_Check(HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED));
 
-  HAL_Status_Check(HAL_ADC_Start_DMA(&hadc1,(uint32_t*) &adc_val, ADC_VAL_SIZE));
+  /* Start DMA controller taking samples from adc and placing them in buffer */
+  HAL_Status_Check(HAL_ADC_Start_DMA(&hadc1,(uint32_t*) &adc_val, ADC_BUFF_SIZE));
 
+  /* Start timer used to trigger adc conversions */
   HAL_Status_Check(HAL_TIM_Base_Start_IT(&htim3));
 
   /* USER CODE END 2 */
@@ -150,8 +154,8 @@ int main(void)
   {
 	  if(print)
 	  {
-		  split_data((uint16_t*)(&adc_val)+adc_array_offset, ADC_VAL_HALF_SIZE,(uint8_t*) &adc_val_ds, dfactor);
-		  HAL_print_number((uint8_t*)&adc_val_ds, ADC_VAL_HALF_SIZE*2/dfactor);
+		  /* This is actually sending half of the adc array but because of the cast to uint8_t */
+		  HAL_print_raw((uint8_t*)(&adc_val)+adc_array_offset, ADC_BUFF_SIZE);
 		  print = 0;
 	  }
   /* USER CODE END WHILE */
@@ -413,40 +417,31 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+/* Called when the adc buffer is half full */
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc)
 {
+	/* Set flag to send first half of buffer */
 	print = 1;
 	adc_array_offset = 0;
 }
 
+/* Called when the adc buffer is full */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef * hadc)
 {
+	/* Set flag to send second half of buffer */
 	print = 1;
-	adc_array_offset = ADC_VAL_HALF_SIZE;
-	HAL_Status_Check(HAL_ADC_Start_DMA(&hadc1,(uint32_t*) &adc_val, ADC_VAL_SIZE));
+	adc_array_offset = ADC_BUFF_OFFSET;
+	/* Tell DMA controller to restart filling the buffer */
+	HAL_Status_Check(HAL_ADC_Start_DMA(&hadc1,(uint32_t*) &adc_val, ADC_BUFF_SIZE));
 }
 
-/**
-  * @brief  Tx Transfer completed callback
-  * @param  huart: UART handle.
-  * @note   This example shows a simple way to report end of DMA Tx transfer, and
-  *         you can add your own implementation.
-  * @retval None
-  */
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
-}
-
-/**
-  * @brief  Rx Transfer completed callback
-  * @param  huart: UART handle
-  * @note   This example shows a simple way to report end of DMA Rx transfer, and
-  *         you can add your own implementation.
-  * @retval None
-  */
+/* Called when the UART has processed 1 byte, had to implement own circular buffer this way
+ * as HAL library didn't facilitate asynchronous receiving
+ */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	//uint8_t* temp_str_buffer = rx_control.buffer+rx_control.tail;
+	/* End of buffer */
 	if((uint32_t)huart->pRxBuffPtr >= ((uint32_t) (rx_control.buffer)+rx_control.size-1))
 	{
 		huart->pRxBuffPtr = rx_control.buffer;
@@ -459,31 +454,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		rx_control.head++;
 	}
 
+	/* Full message received, process it */
 	if((uint8_t)*(rx_control.buffer+rx_control.head-1) == (uint8_t) END_OF_MESSAGE_CHAR)
 	{
 		rx_control.tail = rx_control.head;
 		//HAL_printf("Received %s", temp_str_buffer);
 	}
 
+	/* Re-enable receive interrupt */
 	__HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
-}
-
-/**
-  * @brief  UART error callbacks
-  * @param  huart: UART handle
-  * @note   This example shows a simple way to report transfer error, and you can
-  *         add your own implementation.
-  * @retval None
-  */
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
-{
-}
-
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim)
-{
-	if(htim->Instance == TIM3)
-	{
-	}
 }
 
 /* USER CODE END 4 */
