@@ -2,27 +2,31 @@ import serial
 import time
 import numpy as np
 
+n = 0
+N = 2000
+serial_buff = np.zeros(N, dtype='uint16')
+ser = serial.Serial('/dev/ttyUSB0', baudrate=57600, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
 
-ser = serial.Serial('/dev/ttyUSB0', 57600)
+filename = '/home/ronan/Documents/EEG_csv/' + time.ctime() + '.csv'
+filename = filename.replace(':', '-')
+logfile = open(filename, 'w')
+if not logfile:
+    print('Failed')
+    ser.close()
+print('OK')
 
-input_data = b''
+print('waiting')
+while ser.inWaiting() == 0:
+    pass
+print('connected')
+ser.reset_input_buffer()
 
 while 1:
-    print('waiting')
-    while ser.inWaiting() == 0:
-        pass
-
-    input_data = b''
-    while ser.inWaiting() > 0:
-                input_data += ser.read()
-    input_data = input_data.hex()
-    print(input_data)
-    print(len(input_data))
-
-    hex_val = np.array([], dtype='uint16')
-    for x in range(0, len(input_data),4):
-        hex_val1 = int(input_data[x:x+2], 16) << 8
-        hex_val2 = int(input_data[x+2:x+4], 16)
-        hex_val = np.append([hex_val], [(hex_val1 | hex_val2)])
-    print(hex_val)
-    print(len(hex_val))
+    if ser.inWaiting() > 2:
+        lowbyte = ser.read()
+        highbyte = ser.read()
+        serial_buff[n] = (ord(highbyte) << 8) + ord(lowbyte)
+        # Write this sample to the data log file
+        logfile.write(str(serial_buff[n]) + '\n')
+        print(serial_buff[n])
+        n = (n+1) % N
