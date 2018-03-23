@@ -134,8 +134,10 @@ void TIM3_IRQHandler(void)
 void USART1_IRQHandler(void)
 {
   /* USER CODE BEGIN USART1_IRQn 0 */
+	/* If the interrupt is from receiving a byte */
 	if(huart1.Instance->ISR & USART_ISR_RXNE)
 	{
+		/* Work around for asynchronous receiver */
 		huart1.RxState = HAL_UART_STATE_BUSY_RX;
 		huart1.RxXferCount = 1;
 	}
