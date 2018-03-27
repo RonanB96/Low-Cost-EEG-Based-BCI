@@ -1,88 +1,52 @@
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
 import numpy as np
-import threading
 import serial
+import threading
+from time import sleep
 
 win = pg.GraphicsWindow()
-xAxis = pg.AxisItem('bottom')
 win.setWindowTitle('pyqtgraph example: Scrolling Plots')
 
-size_of_data = 16384
-size_of_dis_data = 512
-xAxis.setLabel("Time(ms)")
-p2 = win.addPlot(axisitems={'bottom': xAxis})
-data = np.zeros(size_of_data, dtype='uint16')
-serial_buff = data
-table_values = serial_buff
-p2.setYRange(0, 4094)
-# p2.setClipToView(True)
-# p2.setDownsampling(mode="mean")
-curve = p2.plot(data)
-ptr1 = 0
+size_of_data = 2000
+app = QtGui.QApplication([])
+p = win.addPlot()
+serial_buff = 2048*np.ones(size_of_data, dtype='uint16')
+p.setXRange(0, 2000)
+p.setYRange(0, 4094)
+curve = p.plot()
 head = 0
-tail = 0
-tail_overflow = 0
-head_overflow = 0
-first_pass = True
-
-
-def update():
-    global data, curve, ptr1, serial_buff, tail, head, head_overflow, tail_overflow
-    while 1:
-        if (tail < head) or (tail_overflow < head_overflow):
-            data[:-1] = data[1:]  # shift data in the array one sample left
-            # (see also: np.roll)
-            data[-1] = serial_buff[tail]
-            tail += 1
-            if tail == size_of_data:
-                tail = 0
-                tail_overflow += 1
-
-            ptr1 += 1
-            curve.setData(data[0:size_of_dis_data])
-            curve.setPos(ptr1, 0)
+data_read = 0
 
 
 def serial_read():
-    global head, tail, head_overflow, serial_buff, data, first_pass, table_values
+    global head, data_read, serial_buff
+    ser.reset_input_buffer()
     while True:
-        if ser.inWaiting() >= 2:
+        while ser.inWaiting() >= 2:
+            data_read = 1
             lowbyte = ser.read()
             highbyte = ser.read()
             serial_buff[head] = (ord(highbyte) << 8) + ord(lowbyte)
-            #print(serial_buff[head])
-            if serial_buff[head] == 0:
-                print("serial buff equals 0 at head: {0}and tail :{1}, value : {2}".format(str(head), str(tail),
-                                                                                        str(serial_buff[head])))
-            head = (head + 1) % size_of_data
-            if head == tail:
-                print("head equal tail: {0}".format(str(head)))
-            if first_pass and head > size_of_dis_data:
-                data = serial_buff
-                thread1.start()
-                first_pass = False
-            #if head == size_of_data:
-            #    head = 0
-            #    head_overflow += 1
-            #    table_values = serial_buff
-            #    thread3.start()
-        else:
-            # print("no data")
-            pass
+            head = (head+1) % size_of_data
 
 
-def save_values():
-    np.savetxt("serial_data.csv", table_values, delimiter=',')
+def update_plot():
+    global data_read, curve, serial_buff, head
+    tail = 0
+    while True:
+        if data_read is 1:
+            curve.setData(serial_buff[:head])
+            #curve.setPos(head,0)
+            QtGui.QApplication.processEvents()
+            data_read = 0
+        sleep(0.025)
 
 
 ser = serial.Serial('/dev/ttyUSB0', baudrate=57600, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
-
-thread1 = threading.Thread(target=update)
-thread2 = threading.Thread(target=serial_read)
-thread3 = threading.Thread(target=save_values, daemon=True)
-ser.reset_input_buffer()
-thread2.start()
+thread1 = threading.Thread(target=serial_read, daemon=True)
+thread1.start()
+update_plot()
 # thread1.start()
 
 ## Start Qt event loop unless running in interactive mode or using pyside.

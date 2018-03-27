@@ -7,23 +7,27 @@ win = pg.GraphicsWindow()
 win.setWindowTitle('pyqtgraph example: Scrolling Plots')
 
 size_of_data = 2000
-p2 = win.addPlot()
+p = win.addPlot()
 serial_buff = 2048*np.ones(size_of_data, dtype='uint16')
-p2.setYRange(0, 4094)
-curve = p2.plot(serial_buff)
+p.setXRange(0, 2000)
+p.setYRange(0, 4094)
+curve = p.plot(serial_buff)
 head = 0
 
 
 def serial_read(plot ,buff):
     global head
+    data_read = 0
     while True:
         while ser.inWaiting() >= 2:
+            data_read = 1
             lowbyte = ser.read()
             highbyte = ser.read()
             buff[head] = (ord(highbyte) << 8) + ord(lowbyte)
-            print(buff[head])
             head = (head+1) % size_of_data
-        plot.setData(buff)
+        if data_read:
+            plot.setData(buff[:head])
+            QtGui.QApplication.processEvents()
 
 
 ser = serial.Serial('/dev/ttyUSB0', baudrate=57600, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
