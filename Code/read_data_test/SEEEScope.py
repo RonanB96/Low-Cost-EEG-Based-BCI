@@ -81,11 +81,8 @@ class SEEEScope:
         while self.ser.inWaiting() >= 2:
 
             # Read next sample data
-            #lowbyte = self.ser.read()
-            #highbyte = self.ser.read()
-            highbyte = self.ser.read()
             lowbyte = self.ser.read()
-
+            highbyte = self.ser.read()
             # Combine bytes into sample value
             self.buf[self.n] = (ord(highbyte) << 8) + ord(lowbyte)
 
