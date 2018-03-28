@@ -43,8 +43,9 @@ def update_plot():
     tail = 0
     while True:
         if data_read is 1:
-            curve.setData(serial_buff)
+            curve.setData(serial_buff[:head])
             #curve.setPos(head,0)
+            tail = head
             QtGui.QApplication.processEvents()
             data_read = 0
         time.sleep(0.025)
