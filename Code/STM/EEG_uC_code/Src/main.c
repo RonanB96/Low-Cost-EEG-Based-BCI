@@ -57,6 +57,7 @@ DMA_HandleTypeDef hdma_usart1_rx;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+#define RECEIVE_PRINT_EN		1
 #define ADC_BUFF_SIZE			512
 #define ADC_BUFF_HALF_SIZE 		ADC_BUFF_SIZE/2
 /* The offset is the size of adc array as this accounts for changing from 16bit to 8bit int */
@@ -65,15 +66,20 @@ DMA_HandleTypeDef hdma_usart1_rx;
 #define END_OF_MESSAGE_CHAR		'\n'
 
 __IO uint16_t adc_val[ADC_BUFF_SIZE] ={0};
+__IO uint8_t * print_str_ptr = NULL;
 __IO uint16_t adc_array_offset = 0;
-__IO uint8_t print = 0;
+__IO uint8_t adc_print = 0;
+__IO uint8_t str_print = 0;
+__IO uint8_t start = 0;
+__IO uint8_t end_of_message = 0;
 
 uint8_t rx_buffer[UART_RX_BUFFER_SIZE] ={0};
 circle_buff_s rx_control ={
 		.buffer = rx_buffer,
 		.head = 0,
 		.tail = 0,
-		.size = UART_RX_BUFFER_SIZE
+		.size = UART_RX_BUFFER_SIZE,
+		.wrapped = 0
 };
 
 /* USER CODE END PV */
@@ -150,13 +156,32 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  /*while(!start)
+  {
+
+  }*/
   while (1)
   {
-	  if(print)
+	  if(adc_print)
 	  {
 		  /* This is actually sending half of the adc array but because of the cast to uint8_t */
 		  HAL_print_raw((uint8_t*)(&adc_val)+adc_array_offset, ADC_BUFF_SIZE);
-		  print = 0;
+		  adc_print = 0;
+	  }
+	  if(str_print && RECEIVE_PRINT_EN)
+	  {
+		  if(!end_of_message)
+		  {
+			  HAL_printf("Received %s", print_str_ptr);
+		  }
+		  /* Start of message already sent, print end of message */
+		  else
+		  {
+			  HAL_print_raw(print_str_ptr,rx_control.head);
+			  end_of_message = 0;
+		  }
+		  str_print = 0;
 	  }
   /* USER CODE END WHILE */
 
@@ -421,7 +446,7 @@ static void MX_GPIO_Init(void)
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc)
 {
 	/* Set flag to send first half of buffer */
-	print = 1;
+	adc_print = 1;
 	adc_array_offset = 0;
 }
 
@@ -429,7 +454,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc)
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef * hadc)
 {
 	/* Set flag to send second half of buffer */
-	print = 1;
+	adc_print = 1;
 	adc_array_offset = ADC_BUFF_OFFSET;
 	/* Tell DMA controller to restart filling the buffer */
 	HAL_Status_Check(HAL_ADC_Start_DMA(&hadc1,(uint32_t*) &adc_val, ADC_BUFF_SIZE));
@@ -440,14 +465,15 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef * hadc)
  */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	//uint8_t* temp_str_buffer = rx_control.buffer+rx_control.tail;
-	/* End of buffer */
+	/* End of buffer, print start of message */
 	if((uint32_t)huart->pRxBuffPtr >= ((uint32_t) (rx_control.buffer)+rx_control.size-1))
 	{
+		print_str_ptr = rx_control.buffer+rx_control.tail;
 		huart->pRxBuffPtr = rx_control.buffer;
 		rx_control.head = 0;
 		rx_control.tail = 0;
-		//HAL_printf("Received %s", temp_str_buffer);
+		rx_control.wrapped = 1;
+		str_print = 1;
 	}
 	else
 	{
@@ -457,8 +483,22 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	/* Full message received, process it */
 	if((uint8_t)*(rx_control.buffer+rx_control.head-1) == (uint8_t) END_OF_MESSAGE_CHAR)
 	{
+		/* Don't set print_str_ptr if it was set already above */
+		if(!str_print)
+		{
+			print_str_ptr = rx_control.buffer+rx_control.tail;
+			str_print = 1;
+		}
+
 		rx_control.tail = rx_control.head;
-		//HAL_printf("Received %s", temp_str_buffer);
+
+		if(rx_control.wrapped)
+		{
+			rx_control.wrapped = 0;
+			/* memset everything after current message */
+			memset(rx_control.buffer+rx_control.tail,0,rx_control.size-rx_control.tail);
+			end_of_message = 1;
+		}
 	}
 
 	/* Re-enable receive interrupt */

@@ -75,7 +75,8 @@ typedef struct{
 	uint8_t* buffer;
 	uint32_t head;
 	uint32_t tail;
-	uint32_t size;
+	size_t size;
+	uint8_t wrapped;
 }circle_buff_s;
 
 /* USER CODE END Private defines */
