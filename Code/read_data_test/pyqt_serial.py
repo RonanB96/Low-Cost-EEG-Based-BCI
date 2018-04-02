@@ -25,8 +25,8 @@ class EEGScope:
         self.t_end = self.t_size
         #self.p.setXRange(self.t_start, self.t_end)
         self.main_plot.setYRange(self.y_min, self.y_max)
-        self.main_plot.setLabel('left', 'Bits (Du)')
-        self.main_plot.setLabel('bottom', 'Time (ms)')
+        self.main_plot.setLabel('left', 'Bits','Du')
+        self.main_plot.setLabel('bottom', 'Time', 'ms')
         self.graph = self.main_plot.plot()
 
         self.N = 2000
@@ -36,17 +36,12 @@ class EEGScope:
         self.pos = 0
         self.data_read = 0
 
-        self.f_start = 0
-        self.f_end = self.Fs/2
         self.fft_sample_size = 1000
         self.fft_sample_num = 0
         self.fft_padding = 5
-        self.fft_plot_sample_size = self.fft_sample_size*self.fft_padding/2
-        self.fft_plot_x_axis = np.arange(self.f_start, self.f_end, self.f_end/self.fft_plot_sample_size)
-        self.fft_plot.setXRange(self.f_start, self.f_end)
         self.fft_plot.setYRange(self.y_min, self.y_max)
-        self.fft_plot.setLabel('left', 'Bits (Du)')
-        self.fft_plot.setLabel('bottom', 'Frequency (Hz)')
+        self.fft_plot.setLabel('left', 'Bits', 'Du')
+        self.fft_plot.setLabel('bottom', 'Frequency', 'Hz')
         self.fft_graph = self.fft_plot.plot()
 
         self.ser = serial.Serial('/dev/ttyUSB0', baudrate=57600, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,
