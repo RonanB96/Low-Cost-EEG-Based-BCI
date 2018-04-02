@@ -1,6 +1,6 @@
+from pyqtgraph.Qt import QtCore, QtGui
 import pyqtgraph as pg
 import numpy as np
-from pyqtgraph.Qt import QtCore, QtGui
 import serial
 import threading
 import time
@@ -19,13 +19,17 @@ class EEGScope:
         self.t_start = 0
         self.t_size = 2000
         self.t_end = self.t_size
-        self.p.setXRange(self.t_start, self.t_end)
+        #self.p.setXRange(self.t_start, self.t_end)
         self.p.setYRange(self.y_min, self.y_max)
+        self.p.setLabel('left', 'Bits (Du)')
+        self.p.setLabel('bottom', 'Time (ms)')
         self.graph = self.p.plot()
 
         self.N = 2000
         self.buff = int(self.y_max/2) * np.ones(self.N, dtype='uint16')
         self.head = 0
+        self.tail = 0
+        self.pos = 0
         self.data_read = 0
 
         self.ser = serial.Serial('/dev/ttyUSB0', baudrate=57600, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,
@@ -67,9 +71,13 @@ class EEGScope:
                 self.head = (self.head + 1) % self.N
 
     def update_plot(self):
-        self.tail = 0
         while True:
             if self.data_read is 1:
+                if self.head > self.tail:
+                    self.pos += self.head - self.tail
+                else:
+                    self.pos += self.head+self.N-self.tail
+                self.graph.setPos(self.pos, 0)
                 self.graph.setData(self.buff)
                 # curve.setPos(head,0)
                 # if tail > head:
@@ -83,6 +91,5 @@ class EEGScope:
 EEGScope()
 ## Start Qt event loop unless running in interactive mode or using pyside.
 if __name__ == '__main__':
-
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
         QtGui.QApplication.instance().exec_()
