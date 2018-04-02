@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 path = '/home/ronan/Documents/EEG_csv/'
-file = 'Tue Mar 27 18-22-16 2018.csv'
+file = 'eeg_fp0_eyes_open.csv'
 buff = []
 n = 0
 Fs = 1000
