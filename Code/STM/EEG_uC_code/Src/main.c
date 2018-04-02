@@ -157,10 +157,10 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  while(!start)
+  /*while(!start)
   {
 
-  }
+  }*/
   while (1)
   {
 	  if(adc_print)
