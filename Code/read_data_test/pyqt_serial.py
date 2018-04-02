@@ -72,7 +72,7 @@ class EEGScope:
                 # if tail > head:
                 # p.setXRange(t_start+t_size, t_end+t_size)
                 self.tail = self.head
-                QtGui.QApplication.processEvents()
+                self.app.processEvents()
                 self.data_read = 0
             time.sleep(0.025)
 
