@@ -1,6 +1,6 @@
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtGui
 import numpy as np
+from pyqtgraph.Qt import QtCore, QtGui
 import serial
 import threading
 import time
@@ -24,7 +24,7 @@ class EEGScope:
         self.graph = self.p.plot()
 
         self.N = 2000
-        self.buff = self.y_max/2 * np.ones(self.N, dtype='uint16')
+        self.buff = int(self.y_max/2) * np.ones(self.N, dtype='uint16')
         self.head = 0
         self.data_read = 0
 
@@ -59,15 +59,18 @@ class EEGScope:
                 self.data_read = 1
                 lowbyte = self.ser.read()
                 highbyte = self.ser.read()
-                self.buff[self.head] = (ord(highbyte) << 8) + ord(lowbyte)
-                self.logfile.write(str(self.buff[self.head]) + '\n')
+
+                #self.buff = np.roll(self.buff, -1)
+                self.buff[:-1] = self.buff[1:]
+                self.buff[-1] = (ord(highbyte) << 8) + ord(lowbyte)
+                self.logfile.write(str(self.buff[-1]) + '\n')
                 self.head = (self.head + 1) % self.N
 
     def update_plot(self):
         self.tail = 0
         while True:
             if self.data_read is 1:
-                self.graph.setData(self.buff[:self.head])
+                self.graph.setData(self.buff)
                 # curve.setPos(head,0)
                 # if tail > head:
                 # p.setXRange(t_start+t_size, t_end+t_size)
