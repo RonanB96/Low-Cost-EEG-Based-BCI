@@ -12,18 +12,22 @@ class EEGScope:
         self.app = QtGui.QApplication([])
         self.win = pg.GraphicsWindow()
         self.win.setWindowTitle('EEG Scope')
-        self.p = self.win.addPlot()
+        self.main_plot = self.win.addPlot()
+        self.win.nextRow()
+        self.fft_plot = self.win.addPlot()
 
         self.y_min = 0
         self.y_max = 4096
+        self.Fs = 1000
+
         self.t_start = 0
         self.t_size = 2000
         self.t_end = self.t_size
         #self.p.setXRange(self.t_start, self.t_end)
-        self.p.setYRange(self.y_min, self.y_max)
-        self.p.setLabel('left', 'Bits (Du)')
-        self.p.setLabel('bottom', 'Time (ms)')
-        self.graph = self.p.plot()
+        self.main_plot.setYRange(self.y_min, self.y_max)
+        self.main_plot.setLabel('left', 'Bits (Du)')
+        self.main_plot.setLabel('bottom', 'Time (ms)')
+        self.graph = self.main_plot.plot()
 
         self.N = 2000
         self.buff = int(self.y_max/2) * np.ones(self.N, dtype='uint16')
@@ -31,6 +35,19 @@ class EEGScope:
         self.tail = 0
         self.pos = 0
         self.data_read = 0
+
+        self.f_start = 0
+        self.f_end = self.Fs/2
+        self.fft_sample_size = 1000
+        self.fft_sample_num = 0
+        self.fft_padding = 5
+        self.fft_plot_sample_size = self.fft_sample_size*self.fft_padding/2
+        self.fft_plot_x_axis = np.arange(self.f_start, self.f_end, self.f_end/self.fft_plot_sample_size)
+        self.fft_plot.setXRange(self.f_start, self.f_end)
+        self.fft_plot.setYRange(self.y_min, self.y_max)
+        self.fft_plot.setLabel('left', 'Bits (Du)')
+        self.fft_plot.setLabel('bottom', 'Frequency (Hz)')
+        self.fft_graph = self.fft_plot.plot()
 
         self.ser = serial.Serial('/dev/ttyUSB0', baudrate=57600, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,
             bytesize=serial.EIGHTBITS)
@@ -71,21 +88,47 @@ class EEGScope:
                 self.head = (self.head + 1) % self.N
 
     def update_plot(self):
+        read_diff = 0
         while True:
             if self.data_read is 1:
                 if self.head > self.tail:
-                    self.pos += self.head - self.tail
+                    read_diff = self.head - self.tail
+                    self.pos += read_diff
+                    self.fft_sample_num += read_diff
                 else:
-                    self.pos += self.head+self.N-self.tail
+                    read_diff = self.head + self.N - self.tail
+                    self.pos += read_diff
+                    self.fft_sample_num += read_diff
+                self.tail = self.head
                 self.graph.setPos(self.pos, 0)
                 self.graph.setData(self.buff)
                 # curve.setPos(head,0)
                 # if tail > head:
                 # p.setXRange(t_start+t_size, t_end+t_size)
-                self.tail = self.head
+                if self.fft_sample_num > self.fft_sample_size:
+                    self.fft_sample_num = 0
+                    temp_data = self.fft_calc(self.buff[:self.fft_sample_size])
+                    self.fft_graph.setData(temp_data[0], temp_data[1])
                 self.app.processEvents()
                 self.data_read = 0
             time.sleep(0.025)
+
+    def fft_calc(self, buff):
+        y_len = len(buff)
+        ham = np.hamming(y_len)
+        y_ham = ham * buff
+        rfft = np.fft.rfft(y_ham, y_len * self.fft_padding)
+        freq_r = np.fft.rfftfreq(y_len * self.fft_padding, 1 / self.Fs)
+
+        '''offset_min = 100
+        f_offset = 0.5
+        for i in range(0, len(freq_r)):
+            diff = abs(f_offset - freq_r[i])
+            if diff < offset_min:
+                offset_min = diff
+                offset_i = i
+        '''
+        return freq_r, 4 / y_len * np.abs(rfft)
 
 
 EEGScope()
