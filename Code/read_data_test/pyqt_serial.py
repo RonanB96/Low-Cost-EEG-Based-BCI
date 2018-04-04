@@ -39,7 +39,8 @@ class EEGScope:
         self.fft_sample_size = 1000
         self.fft_sample_num = 0
         self.fft_padding = 5
-        self.fft_plot.setYRange(self.y_min, self.y_max)
+        self.fft_plot.setYRange(0, 500)
+        self.fft_plot.setXRange(2, 100)
         self.fft_plot.setLabel('left', 'Bits', 'Du')
         self.fft_plot.setLabel('bottom', 'Frequency', 'Hz')
         self.fft_graph = self.fft_plot.plot()
