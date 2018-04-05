@@ -191,6 +191,6 @@ venv.bak/
 # QT Creator
 */startup_window/*.cpp
 */startup_window/*.h
-*/startup_window/*.pro
+*/startup_window/*.pro*
 *[Dd]ebug/
 
