@@ -1,4 +1,5 @@
 from pyqtgraph.Qt import QtCore, QtGui
+#from PyQt5 import QtCore, QtGui
 import pyqtgraph as pg
 import numpy as np
 import serial
@@ -9,24 +10,25 @@ import sys
 
 class EEGScope:
     def __init__(self):
-        self.app = QtGui.QApplication([])
+        self.app = QtGui.QApplication(sys.argv)
+        self.app.aboutToQuit.connect(self.exit)
         self.win = pg.GraphicsWindow()
         self.win.setWindowTitle('EEG Scope')
 
-        self.main_plot = self.win.addPlot()
-        self.avg_main_plot = self.win.addPlot()
+        self.main_plot = self.win.addPlot(title="Raw Data")
+        self.avg_main_plot = self.win.addPlot(title="Averaged Data")
 
         self.win.nextRow()
-        self.fft_plot = self.win.addPlot()
-        self.avg_fft_plot = self.win.addPlot()
+        self.fft_plot = self.win.addPlot(title="FFT of Raw Data")
+        self.avg_fft_plot = self.win.addPlot(title="FFT of Averaged Data")
 
         self.y_min = 0
-        self.y_max = 4096
+        self.y_max = 4095
         self.Fs = 1000
 
         # Main plot setup
         self.main_plot_t_start = 0
-        self.main_plot_t_size = 2000
+        self.main_plot_t_size = 2047
         self.main_plot_t_end = self.main_plot_t_size
         #self.main_plot.setXRange(self.t_start, self.t_end)
         self.main_plot.setYRange(self.y_min, self.y_max)
@@ -46,7 +48,7 @@ class EEGScope:
         self.avg_graph = self.avg_main_plot.plot()
         self.avg_graph_pos = 0
         self.avg_graph_time = np.arange(self.avg_main_plot_t_start, self.avg_main_plot_t_end, 1)
-        self.avg_graph_values = np.zeros(len(self.avg_graph_time))
+        self.avg_graph_values = int(self.y_max / 2) * np.ones(self.avg_main_plot_t_size, dtype='uint16')
 
         # FFT variables
         self.fft_sample_size = 1000
@@ -70,13 +72,14 @@ class EEGScope:
         self.avg_fft_graph_fft_mag = self.fft_graph_fft_mag
 
         # Calculation Variables
-        self.calc_start = False
+        self.avg_calc = False
+        self.fft_calc = False
         self.calc_thread = threading.Thread(target=self.calc, daemon=True)
 
         # Serial variables
         self.ser = serial.Serial('/dev/ttyUSB0', baudrate=57600, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,
             bytesize=serial.EIGHTBITS)
-        self.ser_N = 2000
+        self.ser_N = 2047
         self.ser_head = 0
         self.ser_tail = self.ser_data_read = self.ser_head
         self.ser_buff = int(self.y_max / 2) * np.ones(self.ser_N, dtype='uint16')
@@ -114,6 +117,8 @@ class EEGScope:
                 self.ser_buff[-1] = (ord(highbyte) << 8) + ord(lowbyte)
                 self.logfile.write(str(self.ser_buff[-1]) + '\n')
                 self.ser_head = (self.ser_head + 1) % self.ser_N
+                if self.ser_head == 0:
+                    self.avg_calc = True
 
     def update_plot(self):
         read_diff = 0
@@ -135,7 +140,7 @@ class EEGScope:
 
                 if self.fft_sample_num > self.fft_sample_size:
                     self.fft_sample_num = 0
-                    self.calc_start = True
+                    self.fft_calc = True
 
                 self.app.processEvents()
 
@@ -143,25 +148,34 @@ class EEGScope:
 
     def calc(self):
         while True:
-            if self.calc_start is True:
-                self.calc_start = False
+            if self.avg_calc is True:
+                self.avg_calc = False
+                buff = self.ser_buff
+                self.avg_graph_values = (np.array(self.avg_graph_values) + np.array(buff)) / 2.0
+                self.avg_graph.setData(self.avg_graph_time, self.avg_graph_values)
+
+            if self.fft_calc is True:
+                self.fft_calc = False
 
                 buff = self.ser_buff[:self.fft_sample_size]
                 buff = buff - np.mean(buff)
                 ham = np.hamming(self.fft_sample_size)
                 y_ham = ham * buff
-                rfft = np.fft.rfft(y_ham, self.fft_sample_size * self.fft_padding)
-                self.fft_graph_fft_mag = 4/self.fft_sample_size * np.abs(rfft)
-                self.avg_fft_graph_fft_mag = (np.array(self.avg_fft_graph_fft_mag) + np.array(self.fft_graph_fft_mag)) / 2.0
+                self.fft_graph_fft_mag = 4/self.fft_sample_size * \
+                                         np.abs(np.fft.rfft(y_ham, self.fft_sample_size * self.fft_padding))
+
+                buff = self.avg_graph_values[:self.fft_sample_size]
+                buff = buff - np.mean(buff)
+                y_ham = ham * buff
+                self.avg_fft_graph_fft_mag = 4/self.fft_sample_size * \
+                                         np.abs(np.fft.rfft(y_ham, self.fft_sample_size * self.fft_padding))
 
                 self.fft_graph.setData(self.fft_freq, self.fft_graph_fft_mag)
                 self.avg_fft_graph.setData(self.fft_freq, self.avg_fft_graph_fft_mag)
             time.sleep(0.025)
 
-
+    def exit(self):
+        print("exit called")
+        sys.exit()
 
 EEGScope()
-## Start Qt event loop unless running in interactive mode or using pyside.
-if __name__ == '__main__':
-    if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-        QtGui.QApplication.instance().exec_()
