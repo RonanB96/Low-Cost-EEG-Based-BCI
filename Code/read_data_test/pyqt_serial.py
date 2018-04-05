@@ -1,5 +1,4 @@
-from pyqtgraph.Qt import QtCore, QtGui
-#from PyQt5 import QtCore, QtGui
+from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
 import pyqtgraph as pg
 import numpy as np
 import serial
@@ -7,11 +6,10 @@ import threading
 import time
 import sys
 
-
 class EEGScope:
     def __init__(self):
-        self.app = QtGui.QApplication(sys.argv)
-        self.app.aboutToQuit.connect(self.exit)
+        self.app = QtWidgets.QApplication(sys.argv)
+        #self.app.aboutToQuit.connect(self.exit())
         self.win = pg.GraphicsWindow()
         self.win.setWindowTitle('EEG Scope')
 
