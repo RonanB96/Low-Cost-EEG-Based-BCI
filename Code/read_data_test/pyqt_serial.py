@@ -74,9 +74,13 @@ class EEGScope:
         # Calculation Variables
         self.avg_calc = False
         self.fft_calc = False
+        self.avg_fft_update = False
         self.first_run = True
         self.saved_values = np.zeros(self.main_plot_t_size, dtype='uint16')
         self.calc_thread = threading.Thread(target=self.calc, daemon=True)
+
+        self.win.removeItem(self.avg_main_plot)
+        self.win.removeItem(self.avg_fft_plot)
 
         # Serial variables
         self.ser = serial.Serial('/dev/ttyUSB0', baudrate=57600, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,
@@ -117,21 +121,25 @@ class EEGScope:
 
                 self.graph_buff[:-1] = self.graph_buff[1:]
                 self.graph_buff[-1] = (ord(highbyte) << 8) + ord(lowbyte)
+
                 self.graph_time[:-1] = self.graph_time[1:]
                 self.graph_pos += self.sample_interval
                 self.graph_time[-1] = self.graph_pos
+
                 self.logfile.write(str(self.graph_buff[-1]) + '\n')
 
-                self.saved_values[self.graph_head] = self.graph_buff[-1]
                 self.graph_head = (self.graph_head + 1) % self.graph_N
-                if self.graph_head == 0:
+                '''if self.graph_head == 0:
                     if self.first_run:
-                        self.avg_graph_values = np.copy(self.saved_values)
-                        self.avg_graph.setData(self.avg_graph_time, self.avg_graph_values)
+                        self.avg_graph_values = self.saved_values = np.copy(self.graph_buff)
+                        self.avg_graph.setData(self.avg_graph_time, self.saved_values)
                         self.first_run = 0
                     else:
-                        self.avg_graph_values = (np.array(self.avg_graph_values) + np.array(self.saved_values)) / 2.0
+                        self.avg_graph_values = (np.array(self.saved_values) + np.array(self.graph_buff)) / 2.0
                         self.avg_graph.setData(self.avg_graph_time, self.avg_graph_values)
+                        self.saved_values = np.copy(self.graph_buff)
+
+                    self.avg_fft_update = True'''
 
     def update_plot(self):
         read_diff = 0
@@ -139,7 +147,7 @@ class EEGScope:
             if self.graph_data_read is 1:
                 self.graph_data_read = 0
                 if self.graph_head >= self.graph_tail:
-                    self.fft_sample_num +=  self.graph_head - self.graph_tail
+                    self.fft_sample_num += self.graph_head - self.graph_tail
                 else:
                     self.fft_sample_num += self.graph_head + self.graph_N - self.graph_tail
 
@@ -156,7 +164,7 @@ class EEGScope:
 
     def calc(self):
         while True:
-            if self.fft_calc is True:
+            if self.fft_calc:
                 self.fft_calc = False
 
                 temp_buff = self.graph_buff[self.main_plot_t_size-self.fft_sample_size:]
@@ -168,19 +176,21 @@ class EEGScope:
 
                 fft_mag_max_i = np.argmax(self.fft_graph_fft_mag)
                 print("fft max is:     ", self.fft_freq[fft_mag_max_i])
+                self.fft_graph.setData(self.fft_freq, self.fft_graph_fft_mag)
 
+            if self.avg_fft_update:
+                self.avg_fft_update = False
                 buff = self.avg_graph_values[self.main_plot_t_size-self.fft_sample_size:]
                 buff = buff - np.mean(buff)
-                y_ham = buff  * ham
+                ham = np.hamming(self.fft_sample_size)
+                y_ham = buff * ham
                 self.avg_fft_graph_fft_mag = 4/self.fft_sample_size * \
-                                         np.abs(np.fft.rfft(y_ham, self.fft_sample_size * self.fft_padding))
+                                        np.abs(np.fft.rfft(y_ham, self.fft_sample_size * self.fft_padding))
 
                 avg_fft_mag_max_i = np.argmax(self.avg_fft_graph_fft_mag)
                 print("avg fft max is: ", self.fft_freq[avg_fft_mag_max_i])
-
-
-                self.fft_graph.setData(self.fft_freq, self.fft_graph_fft_mag)
                 self.avg_fft_graph.setData(self.fft_freq, self.avg_fft_graph_fft_mag)
+
             time.sleep(0.025)
 
     def exit(self):
