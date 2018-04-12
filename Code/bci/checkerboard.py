@@ -5,7 +5,7 @@ import time
 tex = np.array([[1, -1], [-1, 1]])
 cycles = 7
 size = 512
-frequency = 10
+frequency = 15
 
 win = visual.Window([1024, 700], units='pix')
 stim = visual.GratingStim(win, tex=tex, size=size, units='pix',
@@ -14,14 +14,21 @@ stim = visual.GratingStim(win, tex=tex, size=size, units='pix',
 
 def busy_wait(seconds):
     c = time.clock()
-    while time.clock()-c < seconds:
+    while time.clock()-c <= seconds:
         pass
 
 
+frame_rate = win.getActualFrameRate()
+frame_interval = 1/frame_rate
 interval = 1/frequency
+stim_frames = np.round(interval/frame_interval)
+
+win.flip()
+n = 0
 while not event.getKeys('escape'):
-    stim.tex = -stim.tex
+    if n % stim_frames == 0:
+        stim.tex = -stim.tex
     stim.draw()
     win.flip()
-    busy_wait(interval)
+    n += 1
 
