@@ -14,7 +14,7 @@ stim = visual.GratingStim(win, tex=tex, size=size, units='pix',
 
 def busy_wait(seconds):
     c = time.clock()
-    while time.clock()-c <= seconds:
+    while time.clock()-c < seconds:
         pass
 
 
@@ -22,6 +22,7 @@ frame_rate = win.getActualFrameRate()
 frame_interval = 1/frame_rate
 interval = 1/frequency
 stim_frames = np.round(interval/frame_interval)
+print("Frame rate is {0}. Actual Flashing Frequency will be {1}".format(frame_rate, str(1/(stim_frames*frame_interval))))
 
 win.flip()
 n = 0
