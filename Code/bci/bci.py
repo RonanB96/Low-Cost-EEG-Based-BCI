@@ -95,7 +95,7 @@ selected_box = visual.Rect(win,
                            units='pix',
                            width=size,
                            height=size,
-                           lineWidth=20,
+                           lineWidth=40,
                            lineColor=[-1, 1, -1],
                            fillColor=None,
                            pos=stim[2].pos)
@@ -234,9 +234,7 @@ def update_selection():
             # Append selection
             else:
                 entered_textbox.text += selection_boxes[selected_index].text
-            # Reset selection to top level
-            for i, x in enumerate(stim):
-                reset_to_top_level()
+            reset_to_top_level()
 
 
 selected_index = -1
@@ -267,7 +265,6 @@ def bci():
                 update_selection()
                 selected_index = -1
 
-
         for i, x in enumerate(stim_frames):
             # Update checkerboard
             if (n % x) == 0:
@@ -276,5 +273,6 @@ def bci():
         draw_screen()
         win.flip()
         n += 1
+
 
 bci()
