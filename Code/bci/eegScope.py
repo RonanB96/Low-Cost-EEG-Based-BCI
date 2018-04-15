@@ -1,4 +1,4 @@
-from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
+from pyqtgraph.Qt import QtCore, QtWidgets
 import pyqtgraph as pg
 import numpy as np
 import serial
@@ -6,7 +6,8 @@ import threading
 import time
 import sys
 
-class EEGScope:
+
+class Scope:
     def __init__(self):
         self.app = QtWidgets.QApplication(sys.argv)
         #self.app.aboutToQuit.connect(self.exit())
@@ -82,6 +83,7 @@ class EEGScope:
         self.win.removeItem(self.avg_main_plot)
         self.win.removeItem(self.avg_fft_plot)
 
+    def start(self):
         # Serial variables
         self.ser = serial.Serial('/dev/ttyUSB0', baudrate=57600, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,
             bytesize=serial.EIGHTBITS)
@@ -89,7 +91,7 @@ class EEGScope:
         self.graph_head = 0
         self.graph_tail = self.graph_data_read = self.graph_head
         self.graph_buff = int(self.y_max / 2) * np.ones(self.graph_N, dtype='uint16')
-        self.graph_thread = threading.Thread(target=self.serial_read, daemon=True)
+        self.serial_thread = threading.Thread(target=self.serial_read, daemon=True)
 
         if not self.ser.isOpen():
             sys.stdout.write('Failed to open port')
@@ -107,9 +109,13 @@ class EEGScope:
             sys.stdout.flush()
             return
 
-        self.graph_thread.start()
-        self.calc_thread.start()
-        self.update_plot()
+        self.plot_timer = QtCore.QTimer()
+        self.plot_timer.timeout.connect(self.update_plot)
+        self.plot_timer.start(25)
+        self.serial_thread.start()
+
+        # Main Loop
+        self.app.exec_()
 
     def serial_read(self):
         self.ser.reset_input_buffer()
@@ -142,59 +148,57 @@ class EEGScope:
                     self.avg_fft_update = True'''
 
     def update_plot(self):
-        read_diff = 0
-        while True:
-            if self.graph_data_read is 1:
-                self.graph_data_read = 0
-                if self.graph_head >= self.graph_tail:
-                    self.fft_sample_num += self.graph_head - self.graph_tail
-                else:
-                    self.fft_sample_num += self.graph_head + self.graph_N - self.graph_tail
+        if self.graph_data_read is 1:
+            self.graph_data_read = 0
+            if self.graph_head >= self.graph_tail:
+                self.fft_sample_num += self.graph_head - self.graph_tail
+            else:
+                self.fft_sample_num += self.graph_head + self.graph_N - self.graph_tail
 
-                self.graph_tail = self.graph_head
-                self.graph.setData(self.graph_time, self.graph_buff)
+            self.graph_tail = self.graph_head
+            self.graph.setData(self.graph_time, self.graph_buff)
 
-                if self.fft_sample_num > self.fft_sample_size:
-                    self.fft_sample_num = 0
-                    self.fft_calc = True
-
-                self.app.processEvents()
-
-            time.sleep(0.025)
+            if self.fft_sample_num > self.fft_sample_size:
+                self.fft_sample_num = 0
+                self.fft_calc = True
+                self.calc()
+            #self.app.processEvents()
 
     def calc(self):
-        while True:
-            if self.fft_calc:
-                self.fft_calc = False
+        if self.fft_calc:
+            self.fft_calc = False
 
-                temp_buff = self.graph_buff[self.main_plot_t_size-self.fft_sample_size:]
-                temp_buff = temp_buff - np.mean(temp_buff)
-                ham = np.hamming(self.fft_sample_size)
-                y_ham = temp_buff * ham
-                self.fft_graph_fft_mag = 4/self.fft_sample_size * \
+            temp_buff = self.graph_buff[self.main_plot_t_size-self.fft_sample_size:]
+            temp_buff = temp_buff - np.mean(temp_buff)
+            ham = np.hamming(self.fft_sample_size)
+            y_ham = temp_buff * ham
+            self.fft_graph_fft_mag = 4/self.fft_sample_size * \
+                                     np.abs(np.fft.rfft(y_ham, self.fft_sample_size * self.fft_padding))
+
+            fft_mag_max_i = np.argmax(self.fft_graph_fft_mag)
+            print("fft max is:     ", self.fft_freq[fft_mag_max_i])
+            self.fft_graph.setData(self.fft_freq, self.fft_graph_fft_mag)
+
+        if self.avg_fft_update:
+            self.avg_fft_update = False
+            buff = self.avg_graph_values[self.main_plot_t_size-self.fft_sample_size:]
+            buff = buff - np.mean(buff)
+            ham = np.hamming(self.fft_sample_size)
+            y_ham = buff * ham
+            self.avg_fft_graph_fft_mag = 4/self.fft_sample_size * \
                                          np.abs(np.fft.rfft(y_ham, self.fft_sample_size * self.fft_padding))
 
-                fft_mag_max_i = np.argmax(self.fft_graph_fft_mag)
-                print("fft max is:     ", self.fft_freq[fft_mag_max_i])
-                self.fft_graph.setData(self.fft_freq, self.fft_graph_fft_mag)
+            avg_fft_mag_max_i = np.argmax(self.avg_fft_graph_fft_mag)
+            print("avg fft max is: ", self.fft_freq[avg_fft_mag_max_i])
+            self.avg_fft_graph.setData(self.fft_freq, self.avg_fft_graph_fft_mag)
 
-            if self.avg_fft_update:
-                self.avg_fft_update = False
-                buff = self.avg_graph_values[self.main_plot_t_size-self.fft_sample_size:]
-                buff = buff - np.mean(buff)
-                ham = np.hamming(self.fft_sample_size)
-                y_ham = buff * ham
-                self.avg_fft_graph_fft_mag = 4/self.fft_sample_size * \
-                                        np.abs(np.fft.rfft(y_ham, self.fft_sample_size * self.fft_padding))
-
-                avg_fft_mag_max_i = np.argmax(self.avg_fft_graph_fft_mag)
-                print("avg fft max is: ", self.fft_freq[avg_fft_mag_max_i])
-                self.avg_fft_graph.setData(self.fft_freq, self.avg_fft_graph_fft_mag)
-
-            time.sleep(0.025)
+        time.sleep(0.025)
 
     def exit(self):
         print("exit called")
         sys.exit()
 
-EEGScope()
+
+if __name__ == '__main__':
+    scope = Scope(None)
+    scope.start()

@@ -1,10 +1,10 @@
-from psychopy import visual, core, event
+from psychopy import visual, event
 import numpy as np
 import time
 
 window_size = [1200, 700]
 cycles = 4
-size =160
+size = 160
 frequency = np.array([10, 20, 15, 5, 12])
 
 special_text = 'SPECIAL'
@@ -47,7 +47,7 @@ for i in range(5):
                                            text=','.join(text_boxes[i]),
                                             pos=[stim[i].pos[0], stim[i].pos[1] + 0.60 * size]))
 
-instructions_text = 'Stare into the center of the box which corresponds to the letter you want to choose'
+instructions_text = 'Stare into the center of the box which corresponds to the character you want to choose'
 instructions_box =visual.TextStim(win,
                                   text=instructions_text,
                                   pos=[0, window_size[1]/2-50],
@@ -96,19 +96,9 @@ selected_box = visual.Rect(win,
                            width=size,
                            height=size,
                            lineWidth=20,
-                           lineColor=[-1,1,-1],
+                           lineColor=[-1, 1, -1],
                            fillColor=None,
                            pos=stim[2].pos)
-selected_index = -1
-box_selected = False
-bottom_level = False
-
-
-def busy_wait(seconds):
-    c = time.clock()
-    while time.clock()-c < seconds:
-        pass
-
 
 frame_rate = win.getActualFrameRate()
 frame_interval = 1/frame_rate
@@ -118,14 +108,17 @@ print("Frame rate is {0}. Actual Flashing Frequency will be {1}".format(frame_ra
 
 
 def group_choices(boxes):
-    if (len(boxes)) / 2 <= len(stim):
+    # Selection boxes can hold 1-4 values each
+    boxes_len = len(boxes)
+    if boxes_len / 2 <= len(stim):
         j_max = 2
-    elif (len(boxes)) / 3 <= len(stim):
+    elif boxes_len / 3 <= len(stim):
         j_max = 3
-    elif (len(boxes)) / 4 <= len(stim):
+    elif boxes_len / 4 <= len(stim):
         j_max = 4
     else:
-        print("unsupported length")
+        print("unsupported length, resetting to top level")
+        reset_to_top_level()
         return
     offset = 0
     for i in range(0, len(stim)):
@@ -134,10 +127,20 @@ def group_choices(boxes):
             try:
                 selection_boxes[i].text += (boxes[i + j + offset] + ',')
             except:
+                # reach end of selections, remove ',' from last box
                 selection_boxes[i].text = selection_boxes[i].text[:-1]
                 break
         offset += 1
+        # remove ',' from end of each box selection
         selection_boxes[i].text = selection_boxes[i].text[:-1]
+
+
+def reset_to_top_level():
+    global bottom_level
+    bottom_level = False
+    for i, x in enumerate(stim):
+        selection_boxes[i].text = ','.join(text_boxes[i])
+        selection_boxes[i].draw()
 
 
 def draw_screen():
@@ -148,105 +151,130 @@ def draw_screen():
     instructions_box.draw()
     entered_background.draw()
     entered_textbox.draw()
-    if selected_index is not -1:
-        # Draw box around selected box
-        selected_box.pos = stim[selected_index].pos
-        selected_box.draw()
-        win.flip()
-        n = 0
-        if not bottom_level:
-            # cant display all element with each box
-            if len(text_boxes[selected_index]) > len(stim):
-                group_choices(text_boxes[selected_index])
-            elif len(selection_boxes[selected_index].text) > 1:
-                temp_text = selection_boxes[selected_index].text.split(',')
-                if len(text_boxes[selected_index]) > len(stim):
-                    group_choices(text_boxes[selected_index])
-                else:
-                    bottom_level = True
-                    for i in range(len(stim)):
-                        try:
-                            selection_boxes[i].text = temp_text[i]
-                        except:
-                            selection_boxes[i].text = ''
-                        selection_boxes[i].draw()
 
-            else:
-                bottom_level = True
-                for i, x in enumerate(stim):
-                    selection_boxes[i].text = text_boxes[selected_index][i]
-                    selection_boxes[i].draw()
+
+def update_selection():
+    global bottom_level
+    # Not to the lowest level selection
+    if not bottom_level:
+        # cant display all element with each box
+        if len(selection_boxes[selected_index].text.split(',')) > len(stim):
+            group_choices(selection_boxes[selected_index].text.split(','))
+        # Non empty selection which can be split into max boxes or less
+        elif len(selection_boxes[selected_index].text) > 1:
+            temp_text = selection_boxes[selected_index].text.split(',')
+            bottom_level = True
+            for i in range(len(stim)):
+                try:
+                    selection_boxes[i].text = temp_text[i]
+                except:
+                    # No more text to display, rest of boxes will have no text
+                    selection_boxes[i].text = ''
+                selection_boxes[i].draw()
+        # Empty box chosen
+        elif len(selection_boxes[selected_index].text) == 0:
+            print("Empty box chosen, resetting to top level")
+            reset_to_top_level()
         else:
-            temp_boxes = []
-            # Non character selection
-            if len(selection_boxes[selected_index].text) > 1:
-
-                if selection_boxes[selected_index].text == num_text:
-                    temp_boxes = num_boxes
-                    if len(temp_boxes) > len(stim):
-                        group_choices(temp_boxes)
-                        bottom_level = False
-                elif selection_boxes[selected_index].text == special_text:
-                    temp_boxes = special_boxes
-                    if len(temp_boxes) > len(stim):
-                        group_choices(temp_boxes)
-                        bottom_level = False
-                elif selection_boxes[selected_index].text == enter_text:
+            print("Unknown state, resetting")
+            reset_to_top_level()
+    # Bottom level selection
+    else:
+        temp_boxes = []
+        # Non single character selection
+        if len(selection_boxes[selected_index].text) > 1:
+            # Special selection choices
+            if selection_boxes[selected_index].text == num_text:
+                temp_boxes = num_boxes
+                if len(temp_boxes) > len(stim):
+                    group_choices(temp_boxes)
                     bottom_level = False
-                    entered_textbox.text = '|'
-                    #TODO something happens on enter
-                elif selection_boxes[selected_index].text == del_text:
+            elif selection_boxes[selected_index].text == special_text:
+                temp_boxes = special_boxes
+                if len(temp_boxes) > len(stim):
+                    group_choices(temp_boxes)
                     bottom_level = False
-                    entered_textbox.text = entered_textbox.text[:-1]
-                elif selection_boxes[selected_index].text == space_text:
-                    bottom_level = False
-                    entered_textbox.text += ' '
-                else:
-                    print('Unknown case')
-                    pass
-
-                if bottom_level:
-                    for i in range(len(stim)):
-                        try:
-                            selection_boxes[i].text = temp_boxes[i]
-                        except:
-                            selection_boxes[i].text = ''
-                        selection_boxes[i].draw()
-                else:
-                    if len(temp_boxes) == 0:
-                        for i, x in enumerate(stim):
-                            selection_boxes[i].text = ','.join(text_boxes[i])
-                            selection_boxes[i].draw()
-            else:
+            elif selection_boxes[selected_index].text == enter_text:
                 bottom_level = False
-                if entered_textbox.text is '|':
-                    entered_textbox.text = selection_boxes[selected_index].text
-                else:
-                    entered_textbox.text += selection_boxes[selected_index].text
-                for i, x in enumerate(stim):
-                    selection_boxes[i].text = ','.join(text_boxes[i])
+                entered_textbox.text = '|'
+                #TODO something happens on enter
+            elif selection_boxes[selected_index].text == del_text:
+                bottom_level = False
+                entered_textbox.text = entered_textbox.text[:-1]
+            elif selection_boxes[selected_index].text == space_text:
+                bottom_level = False
+                entered_textbox.text += ' '
+            else:
+                print('Unknown case')
+                pass
+
+            # Display bottom level selection
+            if bottom_level:
+                for i in range(len(stim)):
+                    try:
+                        selection_boxes[i].text = temp_boxes[i]
+                    except:
+                        selection_boxes[i].text = ''
                     selection_boxes[i].draw()
-        # Delay to show selected box
-        selected_index = -1
-        time.sleep(0.5)
+            else:
+                # something was selected and there was no sub-level
+                # reset selection to top level
+                if len(temp_boxes) == 0:
+                    reset_to_top_level()
+        # Empty box chosen
+        elif len(selection_boxes[selected_index].text) == 0:
+            print("Empty box chosen, resetting to top level")
+            reset_to_top_level()
+        # Single character selection
+        else:
+            bottom_level = False
+            # Remove vertical bar
+            if entered_textbox.text is '|':
+                entered_textbox.text = selection_boxes[selected_index].text
+            # Append selection
+            else:
+                entered_textbox.text += selection_boxes[selected_index].text
+            # Reset selection to top level
+            for i, x in enumerate(stim):
+                reset_to_top_level()
 
 
-mouse.clickReset()
-win.flip()
-n = 0
-while not event.getKeys('escape'):
-    if mouse.getPressed().count(1):
-        mouse.clickReset()
-        pos = mouse.getPos()
-        for i in range(5):
-            if stim[i].contains(pos):
-                selected_index = i
-                break
+selected_index = -1
+selected_box_frames = 0
+box_selected = False
+bottom_level = False
 
-    for i, x in enumerate(stim_frames):
-        if (n % x) == 0:
-            stim[i].tex = -stim[i].tex
-
-    draw_screen()
+def bci():
+    global selected_index, selected_box_frames
+    mouse.clickReset()
     win.flip()
-    n += 1
+    n = 0
+    while not event.getKeys('escape'):
+        if mouse.getPressed().count(1) and (selected_index == -1):
+            mouse.clickReset()
+            pos = mouse.getPos()
+            for i in range(len(stim)):
+                if stim[i].contains(pos):
+                    selected_index = i
+                    selected_box.pos = stim[selected_index].pos
+                    selected_box_frames = 30
+                    selected_box.draw()
+                    break
+        elif selected_index is not -1:
+            selected_box.draw()
+            selected_box_frames -= 1
+            if selected_box_frames <= 0:
+                update_selection()
+                selected_index = -1
+
+
+        for i, x in enumerate(stim_frames):
+            # Update checkerboard
+            if (n % x) == 0:
+                stim[i].tex = -stim[i].tex
+
+        draw_screen()
+        win.flip()
+        n += 1
+
+bci()
