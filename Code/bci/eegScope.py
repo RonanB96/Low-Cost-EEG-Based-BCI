@@ -200,5 +200,5 @@ class Scope:
 
 
 if __name__ == '__main__':
-    scope = Scope(None)
+    scope = Scope()
     scope.start()
