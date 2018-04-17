@@ -7,8 +7,9 @@ import time
 import sys
 
 
-class Scope:
-    def __init__(self):
+class Scope(object):
+    def __init__(self, port, pipe):
+        self.pipe = pipe
         self.app = QtWidgets.QApplication(sys.argv)
         #self.app.aboutToQuit.connect(self.exit())
         self.win = pg.GraphicsWindow()
@@ -83,9 +84,14 @@ class Scope:
         self.win.removeItem(self.avg_main_plot)
         self.win.removeItem(self.avg_fft_plot)
 
+        self.port = port
+
+        if self.pipe is not None:
+            self.start()
+
     def start(self):
         # Serial variables
-        self.ser = serial.Serial('/dev/ttyUSB0', baudrate=57600, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,
+        self.ser = serial.Serial(self.port, baudrate=57600, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,
             bytesize=serial.EIGHTBITS)
         self.graph_N = 2047
         self.graph_head = 0
@@ -176,8 +182,12 @@ class Scope:
                                      np.abs(np.fft.rfft(y_ham, self.fft_sample_size * self.fft_padding))
 
             fft_mag_max_i = np.argmax(self.fft_graph_fft_mag)
-            print("fft max is:     ", self.fft_freq[fft_mag_max_i])
+            #print("fft max is:     ", self.fft_freq[fft_mag_max_i])
             self.fft_graph.setData(self.fft_freq, self.fft_graph_fft_mag)
+            if self.pipe is not None:
+                c = time.clock()
+                self.pipe.send([temp_buff])
+                print(time.clock()-c)
 
         if self.avg_fft_update:
             self.avg_fft_update = False
@@ -189,10 +199,8 @@ class Scope:
                                          np.abs(np.fft.rfft(y_ham, self.fft_sample_size * self.fft_padding))
 
             avg_fft_mag_max_i = np.argmax(self.avg_fft_graph_fft_mag)
-            print("avg fft max is: ", self.fft_freq[avg_fft_mag_max_i])
+            #print("avg fft max is: ", self.fft_freq[avg_fft_mag_max_i])
             self.avg_fft_graph.setData(self.fft_freq, self.avg_fft_graph_fft_mag)
-
-        time.sleep(0.025)
 
     def exit(self):
         print("exit called")
@@ -200,5 +208,5 @@ class Scope:
 
 
 if __name__ == '__main__':
-    scope = Scope()
+    scope = Scope('/dev/ttyUSB0',None)
     scope.start()
