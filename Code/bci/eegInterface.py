@@ -1,5 +1,6 @@
 from psychopy import visual, event
 import numpy as np
+import threading
 
 window_size = [1200, 700]
 cycles = 4
@@ -25,7 +26,8 @@ special_boxes = [space_text, '.', '?', enter_text, del_text]
 
 
 class BCI(object):
-    def __init__(self, win_size, top_level_boxes, freq_array, checker_size, checker_cycles, tex):
+    def __init__(self, win_size, freq_array, checker_size, checker_cycles, tex, pipe):
+        self.pipe = pipe
         self.win_size = win_size
         self.win = visual.Window(self.win_size,
                                  units='pix',
@@ -42,9 +44,9 @@ class BCI(object):
         self.stim = []
         self.selection_boxes = []
         self.xy = []
-        self.top_level_boxes = top_level_boxes
+        self.top_level_boxes = text_boxes
         # Some magic numbers here for the positions, not fully customisable
-        for i in range(len(top_level_boxes)):
+        for i in range(len(self.top_level_boxes)):
             self.xy.append([i * 220 - self.win_size[0] / 2 + self.checker_size,
                             -self.win_size[1] / 2 + 0.75 * self.checker_size +
                             (not ((i + 1) % 2)) * (1.5 * self.checker_size)])
@@ -132,6 +134,12 @@ class BCI(object):
         self.box_selected = False
         # Flag for if we are in the bottom level of the selection tree
         self.bottom_level = False
+
+        self.pipe_thread = threading.Thread(target=self.pipeReceive, daemon=True)
+        self.pipe_thread.start()
+
+        if self.pipe is not None:
+            self.start()
 
     def start(self):
         self.mouse.clickReset()
@@ -297,7 +305,14 @@ class BCI(object):
                 self.reset_to_top_level()
         self.selected_index = -1
 
+    def pipeReceive(self):
+        signal_buff = np.empty(1000)
+        while True:
+            print(" received: {}".format(self.pipe.recv()))
 
-bci = BCI(win_size=window_size, top_level_boxes=text_boxes,
-          freq_array=frequency, checker_cycles=4, checker_size=160, tex=tex)
-bci.start()
+
+if __name__ == '__main__':
+    bci = BCI(win_size=window_size,
+              freq_array=frequency, checker_cycles=4, checker_size=160,
+              tex=tex, pipe=None)
+    bci.start()
