@@ -1,11 +1,12 @@
 from psychopy import visual, event
 import numpy as np
 import threading
+import time
 
 window_size = [1200, 700]
 cycles = 4
 size = 160
-frequency = np.array([10, 20, 15, 5, 12])
+frequencies = np.array([10, 20, 15, 5, 12])
 tex = np.array([[1, -1], [-1, 1]])
 
 special_text = 'SPECIAL'
@@ -119,6 +120,7 @@ class BCI(object):
 
         # Number of frames the green box is shown for
         self.selected_box_on_frames = 30
+        self.selected_box_frames = 0
         self.selected_index = -1
 
         # Average Frame rate
@@ -136,16 +138,15 @@ class BCI(object):
         self.bottom_level = False
 
         self.pipe_thread = threading.Thread(target=self.pipeReceive, daemon=True)
-        self.pipe_thread.start()
 
         if self.pipe is not None:
+            self.pipe_thread.start()
             self.start()
 
     def start(self):
         self.mouse.clickReset()
         self.win.flip()
         frame_count = 0
-        selected_box_frames = 0
         while not event.getKeys('escape'):
             # Check if the left button was clicked and a box is not already selected
             if self.mouse.getPressed().count(1) and (self.selected_index == -1):
@@ -156,15 +157,15 @@ class BCI(object):
                     if self.stim[i].contains(pos):
                         self.selected_index = i
                         self.selected_box.pos = self.stim[self.selected_index].pos
-                        selected_box_frames = self.selected_box_on_frames
+                        self.selected_box_frames = self.selected_box_on_frames
                         self.selected_box.draw()
                         break
             # A Box was selected, redraw
             elif self.selected_index is not -1:
                 self.selected_box.draw()
-                selected_box_frames -= 1
+                self.selected_box_frames -= 1
                 # Last redraw of selection box, update boxes with new selection
-                if selected_box_frames <= 0:
+                if self.selected_box_frames <= 0:
                     self.update_selection()
 
             # Check if any of the checker boards need to be updated
@@ -306,13 +307,84 @@ class BCI(object):
         self.selected_index = -1
 
     def pipeReceive(self):
-        signal_buff = np.empty(1000)
+        padding_fact = 5
+        window_len = 4000
+        Fs = 1000
+        min_SNR = 1.25
+        ham = np.hamming(window_len)
+        freq_r = np.fft.rfftfreq(window_len * padding_fact, 1 / Fs)
         while True:
-            print(" received: {}".format(self.pipe.recv()))
+            signal_buff = np.zeros(window_len)
+            freq_sig_noise = np.zeros([len(self.freq_array),  1])
+            freq_sig_val = np.zeros([len(self.freq_array),  1])
+            signal_buff[0:1000] = self.pipe.recv()
+            signal_buff[1000:2000] = self.pipe.recv()
+            signal_buff[2000:3000] = self.pipe.recv()
+            signal_buff[3000:4000] = self.pipe.recv()
+
+            y_ham = signal_buff *ham
+
+            rfft = np.fft.rfft(y_ham, window_len * padding_fact)
+
+            rfft_mag = 2 / window_len * np.absolute(rfft)
+
+            freq_max_left = 0
+            freq_max_middle = 0
+            freq_max_right = 0
+            freq_tol = Fs/window_len*2
+
+            freq_array2 = np.append(self.freq_array, self.freq_array*2)
+
+            for index, f in enumerate(freq_array2):
+                freq_start = f - freq_tol * 3
+                freq_end = f - freq_tol
+                freq_max = 0
+                count = 0
+                # Y(n) = Y(n-1)+X(i)*Ts
+                i_start = int(freq_start/(Fs/(window_len*padding_fact)))
+                for i in range(i_start-1, len(freq_r)):
+                    if freq_r[i] >= freq_start:
+                        if rfft_mag[i] > freq_max:
+                            freq_max = rfft_mag[i]
+                    if freq_r[i] >= freq_end:
+                        freq_start += freq_tol * 2
+                        freq_end += freq_tol * 2
+                        if count == 0:
+                            freq_max_left = freq_max
+                        elif count == 1:
+                            freq_max_middle = freq_max
+                        elif count == 2:
+                            freq_max_right = freq_max
+                            # non harmonic frequencies
+                            if index < len(self.freq_array):
+                                if freq_max_middle > freq_max_left and freq_max_middle > freq_max_right:
+                                    freq_sig_noise[index] = freq_max_middle * 2 / (freq_max_left + freq_max_left)
+                                    freq_sig_val[index] = freq_max_middle
+                                else:
+                                    freq_sig_noise[index] = 0
+                                    freq_sig_val[index] = 0
+                            else:
+                                # Check if harmonics frequencies have a SNR greater than 1
+                                if freq_max_middle <= freq_max_left or freq_max_middle <= freq_max_right:
+                                    freq_sig_noise[index-len(self.freq_array)] = 0
+                                    freq_sig_val[index-len(self.freq_array)] = 0
+                            break
+                        count += 1
+                        freq_max = 0
+
+            print("mean of freq sig2noise {0}: mean freq sig val {1}".format(freq_sig_noise.tolist(), freq_sig_val.tolist()))
+
+            max_sig_val_index = np.argmax(freq_sig_val*freq_sig_noise)
+            print(frequencies[max_sig_val_index])
+            if freq_sig_noise[max_sig_val_index] > min_SNR:
+                self.selected_index = max_sig_val_index
+                self.selected_box.pos = self.stim[self.selected_index].pos
+                self.selected_box_frames = self.selected_box_on_frames
+                self.selected_box.draw()
 
 
 if __name__ == '__main__':
     bci = BCI(win_size=window_size,
-              freq_array=frequency, checker_cycles=4, checker_size=160,
+              freq_array=frequencies, checker_cycles=4, checker_size=160,
               tex=tex, pipe=None)
     bci.start()

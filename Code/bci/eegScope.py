@@ -176,18 +176,17 @@ class Scope(object):
 
             temp_buff = self.graph_buff[self.main_plot_t_size-self.fft_sample_size:]
             temp_buff = temp_buff - np.mean(temp_buff)
+            if self.pipe is not None:
+                self.pipe.send(temp_buff[:])
+
             ham = np.hamming(self.fft_sample_size)
-            y_ham = temp_buff * ham
+            y_ham = temp_buff# * ham
             self.fft_graph_fft_mag = 4/self.fft_sample_size * \
                                      np.abs(np.fft.rfft(y_ham, self.fft_sample_size * self.fft_padding))
 
             fft_mag_max_i = np.argmax(self.fft_graph_fft_mag)
             #print("fft max is:     ", self.fft_freq[fft_mag_max_i])
             self.fft_graph.setData(self.fft_freq, self.fft_graph_fft_mag)
-            if self.pipe is not None:
-                c = time.clock()
-                self.pipe.send([temp_buff])
-                print(time.clock()-c)
 
         if self.avg_fft_update:
             self.avg_fft_update = False
