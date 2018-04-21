@@ -63,22 +63,15 @@ class BCI(object):
                                                              + 0.60 * self.checker_size]))
         self.num_of_stim = len(self.stim)
 
-        self.instructions_text = 'Stare into the center of the box which corresponds to the character ' \
+        self.instructions_text1 = 'Recording Baseline, please stare into the center box until it starts flashing'
+        self.instructions_text2 = 'Stare into the center of the box which corresponds to the character ' \
                                  'you want to choose'
+        self.instructions_box_update = False
         self.instructions_box = visual.TextStim(self.win,
-                                                text=self.instructions_text,
+                                                text=self.instructions_text1,
                                                 pos=[0, self.win_size[1] / 2 - 50],
                                                 alignHoriz='center',
                                                 alignVert='center')
-        '''visual.TextBox(window=win, text=instructions_text,
-                                     # possible letter area, # 50% transparent
-                                          #font_size=18,
-                                          font_color=[1, 1, 1],
-                                          # possible letter area, # 50% transparent
-                                          size=[1000,1000],
-                                          # by the number of cols x # number of rows of text to support # instead of by a screen # units width x height.
-                                          units='pix',
-                                          pos=[0.0, 0.0],)'''
         # White rectangle for textbox
         self.entered_background = visual.Rect(self.win,
                                               units='pix',
@@ -93,20 +86,6 @@ class BCI(object):
                                                pos=[self.entered_background.pos[0], self.entered_background.pos[1]],
                                                alignHoriz='center',
                                                alignVert='center')
-        '''visual.TextBox(window=win, text=entered_text,
-                                     font_size=18,
-                                     font_color=[-1,-1,-1],
-                                     border_color=[-1,-1,1], # draw a blue border around stim
-                                     border_stroke_width=4, # border width of 4 pix.
-                                     background_color=[1,1,1], # fill the stim background
-                                     # possible letter area, # 50% transparent
-                                     textgrid_shape=[15,2], # specify area of text box
-                                    grid_color=[1,-1,-1,0.5],
-                                    grid_stroke_width=1,
-                                     # by the number of cols x # number of rows of text to support # instead of by a screen # units width x height.
-                                     units='pix',
-                                     pos=(0.0, instructions_box.pos[1]-100), # If the text string length < num rows * num cols in # textgrid_shape, how should text be justified?
-                                     grid_horz_justification='left', grid_vert_justification='top', )'''
         # Green box to outline which box was selected
         self.selected_box = visual.Rect(self.win,
                                         units='pix',
@@ -137,6 +116,8 @@ class BCI(object):
         # Flag for if we are in the bottom level of the selection tree
         self.bottom_level = False
 
+        self.setting_baseline = True
+        self.baseline_count = 0
         self.pipe_thread = threading.Thread(target=self.pipeReceive, daemon=True)
 
         if self.pipe is not None:
@@ -148,31 +129,39 @@ class BCI(object):
         self.win.flip()
         frame_count = 0
         while not event.getKeys('escape'):
-            # Check if the left button was clicked and a box is not already selected
-            if self.mouse.getPressed().count(1) and (self.selected_index == -1):
-                self.mouse.clickReset()
-                pos = self.mouse.getPos()
-                # Check if the mouse was clicked inside one of the boxes
-                for i in range(self.num_of_stim):
-                    if self.stim[i].contains(pos):
-                        self.selected_index = i
-                        self.selected_box.pos = self.stim[self.selected_index].pos
-                        self.selected_box_frames = self.selected_box_on_frames
-                        self.selected_box.draw()
-                        break
-            # A Box was selected, redraw
-            elif self.selected_index is not -1:
-                self.selected_box.draw()
-                self.selected_box_frames -= 1
-                # Last redraw of selection box, update boxes with new selection
-                if self.selected_box_frames <= 0:
-                    self.update_selection()
+            if event.getKeys('b'):
+                self.setting_baseline = True
+                self.baseline_count = 0
+                self.instructions_box.text = self.instructions_text1
+                self.instructions_box_update = True
+                self.entered_textbox.text = '|'
 
-            # Check if any of the checker boards need to be updated
-            for i, x in enumerate(self.stim_frames):
-                if (frame_count % x) == 0:
-                    # Swap checkerboard pattern
-                    self.stim[i].tex = -self.stim[i].tex
+            if not self.setting_baseline:
+                # Check if the left button was clicked and a box is not already selected
+                if self.mouse.getPressed().count(1) and (self.selected_index == -1):
+                    self.mouse.clickReset()
+                    pos = self.mouse.getPos()
+                    # Check if the mouse was clicked inside one of the boxes
+                    for i in range(self.num_of_stim):
+                        if self.stim[i].contains(pos):
+                            self.selected_index = i
+                            self.selected_box.pos = self.stim[self.selected_index].pos
+                            self.selected_box_frames = self.selected_box_on_frames
+                            self.selected_box.draw()
+                            break
+                # A Box was selected, redraw
+                elif self.selected_index is not -1:
+                    self.selected_box.draw()
+                    self.selected_box_frames -= 1
+                    # Last redraw of selection box, update boxes with new selection
+                    if self.selected_box_frames <= 0:
+                        self.update_selection()
+
+                # Check if any of the checker boards need to be updated
+                for i, x in enumerate(self.stim_frames):
+                    if (frame_count % x) == 0:
+                        # Swap checkerboard pattern
+                        self.stim[i].tex = -self.stim[i].tex
 
             # Update re
             self.draw_screen()
@@ -219,6 +208,9 @@ class BCI(object):
         for i, x in enumerate(self.stim):
             self.stim[i].draw()
             self.selection_boxes[i].draw()
+        if self.instructions_box_update:
+            self.instructions_box._needSetText
+            self.instructions_box_update = False
         self.instructions_box.draw()
         self.entered_background.draw()
         self.entered_textbox.draw()
@@ -308,79 +300,66 @@ class BCI(object):
 
     def pipeReceive(self):
         padding_fact = 5
-        window_len = 4000
+        window_len = 2000
+        recv_window_len = 1000
         Fs = 1000
-        min_SNR = 1.25
+        devs = 2.2
+        max_baseline_time = 30
+        max_baseline_count = int(max_baseline_time*Fs/window_len)
+        
         ham = np.hamming(window_len)
-        freq_r = np.fft.rfftfreq(window_len * padding_fact, 1 / Fs)
+        freq_axis = np.fft.rfftfreq(window_len * padding_fact, 1 / Fs)
+        signal_buff = np.zeros(window_len)
+        freq_sig_snr = np.zeros([len(self.freq_array), 1])
+        freq_sig_val = np.zeros([len(frequencies), max_baseline_count])
+        freq_sig_val_thresh = np.zeros([len(frequencies), 1])
+        freq_tol = Fs / window_len
         while True:
-            signal_buff = np.zeros(window_len)
-            freq_sig_noise = np.zeros([len(self.freq_array),  1])
-            freq_sig_val = np.zeros([len(self.freq_array),  1])
-            signal_buff[0:1000] = self.pipe.recv()
-            signal_buff[1000:2000] = self.pipe.recv()
-            signal_buff[2000:3000] = self.pipe.recv()
-            signal_buff[3000:4000] = self.pipe.recv()
+            for i in range(int(window_len/recv_window_len)):
+                signal_buff[i*recv_window_len:i*recv_window_len+recv_window_len] = self.pipe.recv()
 
-            y_ham = signal_buff *ham
-
+            y_ham = signal_buff * ham
             rfft = np.fft.rfft(y_ham, window_len * padding_fact)
+            rfft_mag = 4 / window_len * np.absolute(rfft)
 
-            rfft_mag = 2 / window_len * np.absolute(rfft)
-
-            freq_max_left = 0
-            freq_max_middle = 0
-            freq_max_right = 0
-            freq_tol = Fs/window_len*2
-
-            freq_array2 = np.append(self.freq_array, self.freq_array*2)
-
-            for index, f in enumerate(freq_array2):
-                freq_start = f - freq_tol * 3
-                freq_end = f - freq_tol
-                freq_max = 0
-                count = 0
-                # Y(n) = Y(n-1)+X(i)*Ts
-                i_start = int(freq_start/(Fs/(window_len*padding_fact)))
-                for i in range(i_start-1, len(freq_r)):
-                    if freq_r[i] >= freq_start:
-                        if rfft_mag[i] > freq_max:
-                            freq_max = rfft_mag[i]
-                    if freq_r[i] >= freq_end:
-                        freq_start += freq_tol * 2
-                        freq_end += freq_tol * 2
-                        if count == 0:
-                            freq_max_left = freq_max
-                        elif count == 1:
-                            freq_max_middle = freq_max
-                        elif count == 2:
-                            freq_max_right = freq_max
-                            # non harmonic frequencies
-                            if index < len(self.freq_array):
-                                if freq_max_middle > freq_max_left and freq_max_middle > freq_max_right:
-                                    freq_sig_noise[index] = freq_max_middle * 2 / (freq_max_left + freq_max_left)
-                                    freq_sig_val[index] = freq_max_middle
-                                else:
-                                    freq_sig_noise[index] = 0
-                                    freq_sig_val[index] = 0
+            for index, f in enumerate(frequencies):
+                    freq_start = f - freq_tol
+                    freq_end = f + freq_tol
+                    freq_max = 0
+                    for i in range(0, len(freq_axis)):
+                        if freq_axis[i] >= freq_start:
+                            if rfft_mag[i] > freq_max:
+                                freq_max = rfft_mag[i]
+                        if freq_axis[i] >= freq_end:
+                            if self.setting_baseline:
+                                freq_sig_val[index][self.baseline_count] = freq_max
                             else:
-                                # Check if harmonics frequencies have a SNR greater than 1
-                                if freq_max_middle <= freq_max_left or freq_max_middle <= freq_max_right:
-                                    freq_sig_noise[index-len(self.freq_array)] = 0
-                                    freq_sig_val[index-len(self.freq_array)] = 0
+                                if freq_sig_val_thresh[index] < freq_max:
+                                    freq_sig_snr[index] = freq_max / freq_sig_val_thresh[index]
+                                else:
+                                    freq_sig_snr[index] = 0
                             break
-                        count += 1
-                        freq_max = 0
 
-            print("mean of freq sig2noise {0}: mean freq sig val {1}".format(freq_sig_noise.tolist(), freq_sig_val.tolist()))
-
-            max_sig_val_index = np.argmax(freq_sig_val*freq_sig_noise)
-            print(frequencies[max_sig_val_index])
-            if freq_sig_noise[max_sig_val_index] > min_SNR:
-                self.selected_index = max_sig_val_index
-                self.selected_box.pos = self.stim[self.selected_index].pos
-                self.selected_box_frames = self.selected_box_on_frames
-                self.selected_box.draw()
+            if self.setting_baseline:
+                self.baseline_count += 1
+                if self.baseline_count == max_baseline_count:
+                    for i in range(len(frequencies)):
+                        freq_sig_val_thresh[i] = devs * np.std(freq_sig_val[i]) + np.mean(freq_sig_val[i])
+                    print("threshold values {}".format(freq_sig_val_thresh.tolist()))
+                    self.baseline_count = 0
+                    self.setting_baseline = False
+                    self.instructions_box.text = self.instructions_text2
+                    self.instructions_box_update = True
+                    #self.instructions_box.setText(self.instructions_text2)
+            else:
+                print("freq sig val snr{}".format(freq_sig_snr.tolist()))
+                max_sig_val_index = np.argmax(freq_sig_snr)
+                print("max snr freq {}".format(frequencies[max_sig_val_index]))
+                if freq_sig_snr[max_sig_val_index] > 0:
+                    self.selected_index = max_sig_val_index
+                    self.selected_box.pos = self.stim[self.selected_index].pos
+                    self.selected_box_frames = self.selected_box_on_frames
+                    self.selected_box.draw()
 
 
 if __name__ == '__main__':
