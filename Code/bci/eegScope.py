@@ -67,7 +67,7 @@ class Scope(object):
     def start(self):
         # Serial variables
         self.ser = serial.Serial(self.port, baudrate=57600, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,
-            bytesize=serial.EIGHTBITS)
+                                 bytesize=serial.EIGHTBITS)
         self.graph_N = 2047
         self.graph_head = 0
         self.graph_tail = self.graph_data_read = self.graph_head
@@ -100,7 +100,17 @@ class Scope(object):
 
     def serial_read(self):
         self.ser.reset_input_buffer()
+        start_up = True
+        line = ''
+        print("waiting for uC")
         while True:
+            while start_up:
+                line = self.ser.readline().decode('utf-8')
+                print(line)
+                if line == "sstarting\n":
+                    start_up = False
+                elif line == "ss\n":
+                    self.ser.write('start\n'.encode())
             while self.ser.inWaiting() >= 2:
                 self.graph_data_read = 1
                 lowbyte = self.ser.read()

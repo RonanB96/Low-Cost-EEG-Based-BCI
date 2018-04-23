@@ -47,8 +47,9 @@ void HAL_printf_valist(const char *fmt, va_list argp) {
   string[0] = 's';
 
   while(HAL_UART_GetState(&huart1) != HAL_UART_STATE_READY);
-  if (vsnprintf(string+1,PRINT_BUFFER_SIZE-1, fmt, argp) > 0)
+  if (vsnprintf(string+1,PRINT_BUFFER_SIZE-2, fmt, argp) > 0)
   {
+	  string[strlen(string)]='\n';
 #if UART_NON_BLOCKING
 	  HAL_Status_Check(HAL_UART_Transmit_DMA(&huart1,(uint8_t*)&string, strlen(string))); // send message via UART
   }

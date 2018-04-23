@@ -57,13 +57,14 @@ DMA_HandleTypeDef hdma_usart1_rx;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define RECEIVE_PRINT_EN		1
+#define RECEIVE_PRINT_EN		0
 #define ADC_BUFF_SIZE			512
 #define ADC_BUFF_HALF_SIZE 		ADC_BUFF_SIZE/2
 /* The offset is the size of adc array as this accounts for changing from 16bit to 8bit int */
 #define ADC_BUFF_OFFSET			ADC_BUFF_SIZE
 #define UART_RX_BUFFER_SIZE		256
 #define END_OF_MESSAGE_CHAR		'\n'
+#define START_STR				"start\n"
 
 __IO uint16_t adc_val[ADC_BUFF_SIZE] ={0};
 __IO uint8_t * print_str_ptr = NULL;
@@ -143,6 +144,18 @@ int main(void)
   huart1.pRxBuffPtr = rx_control.buffer;
   huart1.Mask = 0xFFU;
 
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+
+  while(!start)
+  {
+	HAL_printf("s");
+	HAL_Delay(500);
+  }
+  HAL_printf("starting");
+
   /* Calibrate ADC */
   HAL_Status_Check(HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED));
 
@@ -152,15 +165,6 @@ int main(void)
   /* Start timer used to trigger adc conversions */
   HAL_Status_Check(HAL_TIM_Base_Start_IT(&htim3));
 
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-
-  /*while(!start)
-  {
-
-  }*/
   while (1)
   {
 	  if(adc_print)
@@ -487,9 +491,16 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		if(!str_print)
 		{
 			print_str_ptr = rx_control.buffer+rx_control.tail;
-			str_print = 1;
+			if (RECEIVE_PRINT_EN)
+			{
+				str_print = 1;
+			}
 		}
 
+		if(!start && !(strncmp(print_str_ptr,START_STR,strlen(START_STR))))
+		{
+			start = 1;
+		}
 		rx_control.tail = rx_control.head;
 
 		if(rx_control.wrapped)
