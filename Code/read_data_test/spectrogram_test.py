@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-path = '/home/ronan/Documents/EEG_csv/14_april/oz_left_cz/'
-file ='20hz_ssvep2.csv'
+path = '/home/ronan/Documents/EEG_csv/14_april/oz_left_right/'
+file ='5hz_ssvep.csv'
 buff = []
 n = 0
 Fs = 1000

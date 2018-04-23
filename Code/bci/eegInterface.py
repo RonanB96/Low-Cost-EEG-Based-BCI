@@ -1,5 +1,6 @@
 from psychopy import visual, event
 import numpy as np
+import scipy.stats as st
 import threading
 import time
 
@@ -65,7 +66,7 @@ class BCI(object):
 
         self.instructions_text1 = 'Recording Baseline, please stare into the center box until it starts flashing'
         self.instructions_text2 = 'Stare into the center of the box which corresponds to the character ' \
-                                 'you want to choose'
+                                  'you want to choose'
         self.instructions_box_update = False
         self.instructions_box = visual.TextStim(self.win,
                                                 text=self.instructions_text1,
@@ -116,13 +117,15 @@ class BCI(object):
         # Flag for if we are in the bottom level of the selection tree
         self.bottom_level = False
 
-        self.setting_baseline = True
         self.baseline_count = 0
         self.pipe_thread = threading.Thread(target=self.pipeReceive, daemon=True)
 
         if self.pipe is not None:
+            self.setting_baseline = True
             self.pipe_thread.start()
             self.start()
+        else:
+            self.setting_baseline = False
 
     def start(self):
         self.mouse.clickReset()
@@ -209,7 +212,8 @@ class BCI(object):
             self.stim[i].draw()
             self.selection_boxes[i].draw()
         if self.instructions_box_update:
-            self.instructions_box._needSetText
+            self.instructions_box.text = self.instructions_text2
+            #self.instructions_box._needSetText = True
             self.instructions_box_update = False
         self.instructions_box.draw()
         self.entered_background.draw()
@@ -300,18 +304,19 @@ class BCI(object):
 
     def pipeReceive(self):
         padding_fact = 5
-        window_len = 2000
+        window_len = 1000
         recv_window_len = 1000
         Fs = 1000
-        devs = 2.2
+        cdf_per = 10.0
         max_baseline_time = 30
         max_baseline_count = int(max_baseline_time*Fs/window_len)
-        
+
         ham = np.hamming(window_len)
         freq_axis = np.fft.rfftfreq(window_len * padding_fact, 1 / Fs)
         signal_buff = np.zeros(window_len)
-        freq_sig_snr = np.zeros([len(self.freq_array), 1])
-        freq_sig_val = np.zeros([len(frequencies), max_baseline_count])
+        freq_sig_val = np.zeros([len(self.freq_array), 2])
+        freq_sig_val_final = np.zeros([len(self.freq_array), 1])
+        freq_sig_base_val = np.zeros([len(frequencies), max_baseline_count])
         freq_sig_val_thresh = np.zeros([len(frequencies), 1])
         freq_tol = Fs / window_len
         while True:
@@ -323,39 +328,56 @@ class BCI(object):
             rfft_mag = 4 / window_len * np.absolute(rfft)
 
             for index, f in enumerate(frequencies):
-                    freq_start = f - freq_tol
-                    freq_end = f + freq_tol
-                    freq_max = 0
-                    for i in range(0, len(freq_axis)):
-                        if freq_axis[i] >= freq_start:
-                            if rfft_mag[i] > freq_max:
-                                freq_max = rfft_mag[i]
-                        if freq_axis[i] >= freq_end:
-                            if self.setting_baseline:
-                                freq_sig_val[index][self.baseline_count] = freq_max
+                freq_start = f - freq_tol
+                freq_end = f + freq_tol
+                freq_max = 0
+                for i in range(0, len(freq_axis)):
+                    if freq_axis[i] >= freq_start:
+                        if rfft_mag[i] > freq_max:
+                            freq_max = rfft_mag[i]
+                    if freq_axis[i] >= freq_end:
+                        if self.setting_baseline:
+                            freq_sig_base_val[index][self.baseline_count] = freq_max
+                        else:
+                            if freq_sig_val_thresh[index] < freq_max:
+                                freq_sig_val[index][1] = freq_max / freq_sig_val_thresh[index]
                             else:
-                                if freq_sig_val_thresh[index] < freq_max:
-                                    freq_sig_snr[index] = freq_max / freq_sig_val_thresh[index]
-                                else:
-                                    freq_sig_snr[index] = 0
-                            break
+                                freq_sig_val[index][1] = 0
+                        break
 
             if self.setting_baseline:
                 self.baseline_count += 1
                 if self.baseline_count == max_baseline_count:
                     for i in range(len(frequencies)):
-                        freq_sig_val_thresh[i] = devs * np.std(freq_sig_val[i]) + np.mean(freq_sig_val[i])
-                    print("threshold values {}".format(freq_sig_val_thresh.tolist()))
+                        std = np.std(freq_sig_base_val[i])
+                        mean = np.mean(freq_sig_base_val[i])
+                        g_a = (mean / std) ** 2
+                        g_b = (std ** 2) / mean
+                        x = np.linspace(min(freq_sig_base_val[i]), max(freq_sig_base_val[i]) * 1.5, 1000)
+                        fitted_cdf = st.gamma.cdf(x, a=g_a, loc=1/g_b, scale=g_b)
+                        for j in range(len(x)):
+                            if (1 - fitted_cdf[j]) < (cdf_per / 100.0):
+                                freq_sig_val_thresh[i] = x[j]
+                                break
+                        if freq_sig_val_thresh[i] == 0:
+                            freq_sig_val_thresh[i] = mean+2*std
+                        print("freq {} mean {}, std {}, thresh {}".format(frequencies[i], mean, std, x[j]))
+                        freq_sig_val[i][0] = freq_sig_base_val[i][-1]
                     self.baseline_count = 0
                     self.setting_baseline = False
-                    self.instructions_box.text = self.instructions_text2
                     self.instructions_box_update = True
                     #self.instructions_box.setText(self.instructions_text2)
             else:
-                print("freq sig val snr{}".format(freq_sig_snr.tolist()))
-                max_sig_val_index = np.argmax(freq_sig_snr)
-                print("max snr freq {}".format(frequencies[max_sig_val_index]))
-                if freq_sig_snr[max_sig_val_index] > 0:
+                print("freq sig val{}".format(freq_sig_val.tolist()))
+                for i in range(len(frequencies)):
+                    if freq_sig_val[i][0] > 0 and freq_sig_val[i][1] > 0:
+                        freq_sig_val_final[i] = np.mean(freq_sig_val[i])
+                    else:
+                        freq_sig_val_final[i] = 0
+                    freq_sig_val[i][0] = freq_sig_val[i][1]
+                max_sig_val_index = np.argmax(freq_sig_val_final)
+                print("max freq snr {}".format(frequencies[max_sig_val_index]))
+                if freq_sig_val_final[max_sig_val_index] > 0:
                     self.selected_index = max_sig_val_index
                     self.selected_box.pos = self.stim[self.selected_index].pos
                     self.selected_box_frames = self.selected_box_on_frames

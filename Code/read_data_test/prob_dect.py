@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.stats as st
 
-path = '/home/ronan/Documents/EEG_csv/14_april/oz_left_cz/'
-file = '15hz_ssvep.csv'
+path = '/home/ronan/Documents/EEG_csv/14_april/oz_left_right/'
+file = '20hz_ssvep.csv'
 buff = []
 n = 0
 Fs = 1000
@@ -11,8 +12,8 @@ t_start = 0
 t_mid = 30
 t_end = 0
 
-window_len_avg = 2000
-window_len = 2000
+window_len_avg = 1000
+window_len = 1000
 
 devs = 2.2
 
@@ -76,9 +77,21 @@ for index, f in enumerate(frequencies):
 
 print(len(avg_rfft_mag))
 freq_sig_val_thresh = np.zeros([len(frequencies), 1])
+threshold_per = 7.5
 for i in range(len(frequencies)):
-    freq_sig_val_thresh[i] = devs*np.std(freq_sig_val[i])+np.mean(freq_sig_val[i])
-print(freq_sig_val_thresh)
+    std = np.std(freq_sig_val[i])
+    mean = np.mean(freq_sig_val[i])
+    g_a = (mean / std) ** 2
+    g_b = (std ** 2) / mean
+    x = np.linspace(min(freq_sig_val[i]), max(freq_sig_val[i])*1.5, 1000)
+    fitted_cdf = st.gamma.cdf(x, a=g_a, loc=1/g_b, scale=g_b)
+    for j in range(len(x)):
+        if (1-fitted_cdf[j]) < (threshold_per/100.0):
+            freq_sig_val_thresh[i] = x[j]
+            break
+    if freq_sig_val_thresh[i] == 0:
+        freq_sig_val_thresh[i] = mean + 2 * std
+    print("freq {} mean {}, std {}, thresh {}".format(frequencies[i], mean, std, x[j]))
 
 
 if not (window_len*padding_fact) % 2:
@@ -99,8 +112,7 @@ frequenies_index = frequencies/(Fs/(window_len*padding_fact))
 freq_sig_val = np.zeros([len(frequencies), len(rfft_mag)])
 
 freq_max_middle = 0
-freq_tol = Fs/window_len
-freq_diff = freq_tol*2/freq_r[1]
+freq_tol = 1
 
 for index, f in enumerate(frequencies):
     for rfft_index in range(len(rfft_mag)):
@@ -118,6 +130,13 @@ for index, f in enumerate(frequencies):
                     freq_sig_val[index][rfft_index] = 0
                 break
 
+for index, f in enumerate(frequencies):
+    for rfft_index in range(len(rfft_mag)):
+        try:
+            if freq_sig_val[index][rfft_index-1] == 0 and freq_sig_val[index][rfft_index+1] == 0:
+                freq_sig_val[index][rfft_index] = 0
+        except:
+            pass
 for i in range(len(freq_sig_val)):
     plt.plot(freq_sig_val[i], label=frequencies[i])
 plt.legend()
