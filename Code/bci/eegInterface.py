@@ -97,7 +97,7 @@ class BCI(object):
                                         lineWidth=40,
                                         lineColor=[-1, 1, -1],
                                         fillColor=None,
-                                        pos=[0,0] # will be changed when used
+                                        pos=[0, 0]  # will be changed when used
                                         )
 
         # Number of frames the green box is shown for
@@ -318,14 +318,14 @@ class BCI(object):
         fft_padding = 5          # pad fft with 5 times the length
         window_len = 1000        # fft window size
         recv_window_len = 1000   # size of data sent through pipe
-        Fs = 1000
+        fs = 1000
         cdf_per = 10.0           # 10% probability from cumulative density function
         max_baseline_time = 30   # time to get baseline
-        max_baseline_count = int(max_baseline_time*Fs/window_len)
+        max_baseline_count = int(max_baseline_time*fs/window_len)
 
         ham = np.hamming(window_len)
         # Frequency points from fft
-        freq_axis = np.fft.rfftfreq(window_len * fft_padding, 1 / Fs)
+        freq_axis = np.fft.rfftfreq(window_len * fft_padding, 1 / fs)
         signal_buff = np.zeros(window_len)
 
         freq_array_len = len(self.freq_array)
@@ -339,7 +339,7 @@ class BCI(object):
         # Signal threshold which is 10% or less probablitiy
         freq_sig_val_thresh = np.zeros([freq_array_len, 1])
         # Freq tolerance to check magnitude
-        freq_tol = Fs / window_len
+        freq_tol = fs / window_len
         while True:
             # Read in data from pipe, pipe.recv blocks until data is received
             for i in range(int(window_len/recv_window_len)):
@@ -396,7 +396,8 @@ class BCI(object):
                         # if the cdf percent threshold is outside of range, just use 2 standard deviations
                         if freq_sig_val_thresh[i] == 0:
                             freq_sig_val_thresh[i] = mean+2*std
-                        print("freq {} mean {}, std {}, thresh {}".format(self.freq_array[i], mean, std, freq_sig_val_thresh[i]))
+                        print("freq {} mean {}, std {}, thresh {}".format(self.freq_array[i], mean, std,
+                                                                          freq_sig_val_thresh[i]))
                         freq_sig_snr[i][0] = freq_sig_base_val[i][-1]/freq_sig_val_thresh[i]
                     self.baseline_count = 0
                     self.setting_baseline = False
@@ -419,7 +420,7 @@ class BCI(object):
                 # if all snr's are zero, it will return the first in the array
                 if freq_sig_mean_snr[max_sig_val_index] > 0:
                     print("max freq snr {}".format(self.freq_array[max_sig_val_index]))
-                    # draw a green box around selectec box
+                    # draw a green box around selected box
                     self.selected_index = max_sig_val_index
                     self.selected_box.pos = self.stim[self.selected_index].pos
                     self.selected_box_frames = self.selected_box_on_frames
@@ -429,5 +430,5 @@ class BCI(object):
 if __name__ == '__main__':
     bci = BCI(win_size=window_size,
               freq_array=checker_frequency, checker_cycles=checker_cycles, checker_size=checker_size,
-              tex=checker_tex, pipe=None)
+              checker_tex=checker_tex, pipe=None)
     bci.start()

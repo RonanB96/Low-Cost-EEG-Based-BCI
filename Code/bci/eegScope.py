@@ -40,7 +40,7 @@ class Scope(object):
         # Actually create the plot
         self.graph = self.main_plot.plot()
         self.graph_time = np.arange(self.main_plot_t_start, self.main_plot_t_end/self.Fs, self.sample_interval)
-        self.graph_pos = self.graph_time[-1] # Place cursor at the far right of the screen
+        self.graph_pos = self.graph_time[-1]  # Place cursor at the far right of the screen
 
         # FFT variables
         self.fft_sample_size = 1000
@@ -62,9 +62,6 @@ class Scope(object):
         # Calculation Variables
         self.first_run = True
         self.saved_values = np.zeros(self.main_plot_t_size, dtype='uint16')
-
-        # Thread for calculating FFT
-        self.calc_thread = threading.Thread(target=self.calc, daemon=True)
 
         self.port = port
 
@@ -160,24 +157,18 @@ class Scope(object):
                 # Shift head forward
                 self.graph_head = (self.graph_head + 1) % self.graph_N
 
+                self.fft_sample_num += 1
+                # If we have enough samples for FFT
+                if self.fft_sample_num == self.fft_sample_size:
+                    self.fft_sample_num = 0
+                    self.calc()
+
     def update_plot(self):
         # Only update plot is data has been read
         if self.graph_data_read:
             self.graph_data_read = False
-            # increase fft_sample_count
-            if self.graph_head >= self.graph_tail:
-                self.fft_sample_num += self.graph_head - self.graph_tail
-            else:
-                self.fft_sample_num += self.graph_head + self.graph_N - self.graph_tail
-
-            self.graph_tail = self.graph_head
             # Set set new data to plot
             self.graph.setData(self.graph_time, self.graph_buff)
-
-            # If we have enough samples to do fft
-            if self.fft_sample_num > self.fft_sample_size:
-                self.fft_sample_num = 0
-                self.calc()
 
     def calc(self):
         # store current buff so it doesn't changed as we're doing calculations
@@ -193,7 +184,7 @@ class Scope(object):
         ham = np.hamming(self.fft_sample_size)
         y_ham = temp_buff * ham
         self.fft_graph_fft_mag = 4/self.fft_sample_size * \
-                                 np.abs(np.fft.rfft(y_ham, self.fft_sample_size * self.fft_padding))
+            np.abs(np.fft.rfft(y_ham, self.fft_sample_size * self.fft_padding))
 
         # Set FFT data
         self.fft_graph.setData(self.fft_freq, self.fft_graph_fft_mag)
@@ -204,5 +195,5 @@ class Scope(object):
 
 
 if __name__ == '__main__':
-    scope = Scope('/dev/ttyUSB0',None)
+    scope = Scope('/dev/ttyUSB0', None)
     scope.start()
