@@ -85,7 +85,7 @@ __IO uint8_t start = 0;						/* Flag to start main loop after receiving response
 
 
 uint8_t rx_buffer[UART_RX_BUFFER_SIZE] ={0};	/* Buffer for received messages over USART */
-circle_buff_s rx_control ={							/* Struct for managing receive buffer */
+circle_buff_s rx_control ={						/* Struct for managing receive buffer */
 		.buffer = rx_buffer,
 		.head = 0,
 		.tail = 0,
@@ -199,6 +199,7 @@ int main(void)
 		  else
 		  {
 			  HAL_print_raw((uint8_t *)print_str_ptr,rx_control.head);
+			  HAL_print_raw((uint8_t *)'\n',1);
 			  end_of_message = 0;
 		  }
 		  str_print = 0;
