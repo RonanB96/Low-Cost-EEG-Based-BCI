@@ -138,8 +138,8 @@ void USART1_IRQHandler(void)
 	if(huart1.Instance->ISR & USART_ISR_RXNE)
 	{
 		/* Work around for asynchronous receiver */
-		huart1.RxState = HAL_UART_STATE_BUSY_RX;
-		huart1.RxXferCount = 1;
+		huart1.RxState = HAL_UART_STATE_BUSY_RX; /* Set Receive to busy */
+		huart1.RxXferCount = 1;					 /* Number of bytes to process is 1 */
 	}
   /* USER CODE END USART1_IRQn 0 */
   HAL_UART_IRQHandler(&huart1);

@@ -71,13 +71,6 @@
 /* #define USE_FULL_ASSERT    1U */
 
 /* USER CODE BEGIN Private defines */
-typedef struct{
-	uint8_t* buffer;
-	uint32_t head;
-	uint32_t tail;
-	size_t size;
-	uint8_t wrapped;
-}circle_buff_s;
 
 /* USER CODE END Private defines */
 

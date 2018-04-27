@@ -40,8 +40,24 @@
 #include "stm32f3xx_hal.h"
 
 /* USER CODE BEGIN Includes */
+/*
+ *
+ * Last Update = 27/04/2018
+ * Written By Ronan Byrne
+ */
+
 #include <string.h>
 #include "utils.h"
+
+/* Enable Printing of Receive Messages From USART */
+#define RECEIVE_PRINT_EN		0
+#define ADC_BUFF_SIZE			512
+#define ADC_BUFF_HALF_SIZE 		ADC_BUFF_SIZE/2
+/* The offset is the size of adc array as this accounts for casting 16bit to 8bit int */
+#define ADC_BUFF_OFFSET			ADC_BUFF_SIZE
+#define UART_RX_BUFFER_SIZE		256
+#define END_OF_MESSAGE_CHAR		'\n'
+#define START_STR				"start\n"
 
 /* USER CODE END Includes */
 
@@ -57,25 +73,19 @@ DMA_HandleTypeDef hdma_usart1_rx;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define RECEIVE_PRINT_EN		0
-#define ADC_BUFF_SIZE			512
-#define ADC_BUFF_HALF_SIZE 		ADC_BUFF_SIZE/2
-/* The offset is the size of adc array as this accounts for changing from 16bit to 8bit int */
-#define ADC_BUFF_OFFSET			ADC_BUFF_SIZE
-#define UART_RX_BUFFER_SIZE		256
-#define END_OF_MESSAGE_CHAR		'\n'
-#define START_STR				"start\n"
 
-__IO uint16_t adc_val[ADC_BUFF_SIZE] ={0};
+/* __IO is volatile in HAL library */
 __IO uint8_t * print_str_ptr = NULL;
-__IO uint16_t adc_array_offset = 0;
-__IO uint8_t adc_print = 0;
-__IO uint8_t str_print = 0;
-__IO uint8_t start = 0;
-__IO uint8_t end_of_message = 0;
+__IO uint16_t adc_val[ADC_BUFF_SIZE] ={0};	/* Where the ADC values are stored */
+__IO uint16_t adc_array_offset = 0;			/* Offset for sending first or second half of ADC buffer */
+__IO uint8_t adc_print = 0;					/* Print adc values flag */
+__IO uint8_t str_print = 0;					/* Print string flag */
+__IO uint8_t end_of_message = 0;			/* Flag is set when start of string has be sent */
+__IO uint8_t start = 0;						/* Flag to start main loop after receiving response from PC */
 
-uint8_t rx_buffer[UART_RX_BUFFER_SIZE] ={0};
-circle_buff_s rx_control ={
+
+uint8_t rx_buffer[UART_RX_BUFFER_SIZE] ={0};	/* Buffer for received messages over USART */
+circle_buff_s rx_control ={							/* Struct for managing receive buffer */
 		.buffer = rx_buffer,
 		.head = 0,
 		.tail = 0,
@@ -137,44 +147,50 @@ int main(void)
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
-  /* Enable interrupt on Byte in UART buffer */
+  /* Enable interrupt on single Byte receive in USART buffer */
   __HAL_UART_ENABLE_IT(&huart1, UART_IT_RXNE);
 
   /* Workaround for asynchronous UART RX */
-  huart1.pRxBuffPtr = rx_control.buffer;
-  huart1.Mask = 0xFFU;
+  huart1.pRxBuffPtr = rx_control.buffer;	/* Tell USART where to place received bytes */
+  huart1.Mask = 0xFFU;						/* Setting no parity bits */
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
+  /* Loop around until "start\n" is received over USART */
   while(!start)
   {
-	HAL_printf("s");
-	HAL_Delay(500);
+	HAL_printf("s"); /* Send "ss/n" over USART */
+	HAL_Delay(500);	 /* Delay 500ms */
   }
+  /* Received start from PC, acknowledge and start */
   HAL_printf("starting");
 
   /* Calibrate ADC */
   HAL_Status_Check(HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED));
 
-  /* Start DMA controller taking samples from adc and placing them in buffer */
+  /* Start DMA controller taking samples from ADC and placing them in buffer */
   HAL_Status_Check(HAL_ADC_Start_DMA(&hadc1,(uint32_t*) &adc_val, ADC_BUFF_SIZE));
 
-  /* Start timer used to trigger adc conversions */
+  /* Start timer used to trigger ADC conversions, timer set to 1KHz */
   HAL_Status_Check(HAL_TIM_Base_Start_IT(&htim3));
 
+  /* Main Loop, sends the half the ADC buffer every 256ms and can send received messaged if enabled */
   while (1)
   {
+	  /* ADC values ready to send */
 	  if(adc_print)
 	  {
-		  /* This is actually sending half of the adc array but because of the cast to uint8_t */
+		  /* This is actually sending half of the ADC buffer because of the cast, 512 uin8_t's or 256 uint16_t's */
 		  HAL_print_raw((uint8_t*)(&adc_val)+adc_array_offset, ADC_BUFF_SIZE);
 		  adc_print = 0;
 	  }
+	  /* Received message over USART, print it back */
 	  if(str_print && RECEIVE_PRINT_EN)
 	  {
+		  /* Full message received, send in one go */
 		  if(!end_of_message)
 		  {
 			  HAL_printf("Received %s", print_str_ptr);
@@ -182,7 +198,7 @@ int main(void)
 		  /* Start of message already sent, print end of message */
 		  else
 		  {
-			  HAL_print_raw(print_str_ptr,rx_control.head);
+			  HAL_print_raw((uint8_t *)print_str_ptr,rx_control.head);
 			  end_of_message = 0;
 		  }
 		  str_print = 0;
@@ -446,7 +462,7 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-/* Called when the adc buffer is half full */
+/* Called When the ADC has filled half of the buffer */
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc)
 {
 	/* Set flag to send first half of buffer */
@@ -454,7 +470,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc)
 	adc_array_offset = 0;
 }
 
-/* Called when the adc buffer is full */
+/* Called when the ADC has filled the buffer */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef * hadc)
 {
 	/* Set flag to send second half of buffer */
@@ -464,7 +480,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef * hadc)
 	HAL_Status_Check(HAL_ADC_Start_DMA(&hadc1,(uint32_t*) &adc_val, ADC_BUFF_SIZE));
 }
 
-/* Called when the UART has processed 1 byte, had to implement own circular buffer this way
+/* Called when the UART has processed 1 byte, had to implement my own circular buffer this way
  * as HAL library didn't facilitate asynchronous receiving
  */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
@@ -497,12 +513,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			}
 		}
 
-		if(!start && !(strncmp(print_str_ptr,START_STR,strlen(START_STR))))
+		/* Start message received from PC, start main loop */
+		if(!start && !(strncmp((char *)print_str_ptr,START_STR,strlen(START_STR))))
 		{
 			start = 1;
 		}
 		rx_control.tail = rx_control.head;
 
+		/* If receive buffer has wrapped around, print end of message and memset rest of buffer */
 		if(rx_control.wrapped)
 		{
 			rx_control.wrapped = 0;
@@ -512,7 +530,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		}
 	}
 
-	/* Re-enable receive interrupt */
+	/* Re-enable byte received interrupt */
 	__HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
 }
 
