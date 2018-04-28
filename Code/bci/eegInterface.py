@@ -5,10 +5,10 @@ import threading
 
 # Interface arguments
 window_size = [1200, 700]
-checker_cycles = 4  # Number of times texture repeats in box
+checker_cycles = 4                                  # Number of times texture repeats in box
 checker_size = 160
-checker_tex = np.array([[1, -1], [-1, 1]])  # One black and one white box
-checker_frequency = np.array([10, 20, 15, 5, 12])  # Flashing Frequencies
+checker_tex = np.array([[1, -1], [-1, 1]])          # One black and one white box
+checker_frequency = np.array([10, 20, 15, 5, 12])   # Flashing Frequencies
 
 special_text = 'SPECIAL'
 num_text = 'NUM'
@@ -110,7 +110,7 @@ class BCI(object):
         self.frame_interval = 1 / self.frame_rate
         # The time interval for each box
         self.interval = 1 / self.freq_array
-        # Number of frames each checkerbox is shown
+        # Number of frames each checker box is shown
         self.stim_frames = np.round(self.interval / self.frame_interval)
         print("Frame rate is {0}. Actual Flashing Frequency will be {1}".format(self.frame_rate, str(
             1 / (self.stim_frames * self.frame_interval))))
@@ -143,7 +143,7 @@ class BCI(object):
                 self.instructions_box_update = True
                 self.entered_textbox.text = '|'
 
-            # If not reocrding baseline, check if any boxes were selected or need to be updated
+            # If not recording baseline, check if any boxes were selected or need to be updated
             if not self.setting_baseline:
                 # Check if the left button was clicked and a box is not already selected
                 if self.mouse.getPressed().count(1) and (self.selected_index == -1):
