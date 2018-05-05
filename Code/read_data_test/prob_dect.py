@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as st
 
-path = '/home/ronan/Documents/EEG_csv/14_april/oz_left_right/'
-file = '20hz_ssvep.csv'
+path = '/home/ronan/Documents/EEG_csv/24_april/'
+file = '5hz_checker.csv'
 buff = []
 n = 0
 Fs = 1000
@@ -42,16 +42,14 @@ avg_rfft_mag = np.zeros([int((i_end-i_start)/window_len_avg), avg_fft_len])
 avg_freq_r = np.fft.rfftfreq(window_len_avg*padding_fact, 1/Fs)
 ham = np.hamming(window_len_avg)
 for i in range(len(avg_rfft_mag)):
-    avg_rfft_mag[i] = abs(np.fft.rfft(ham*buff[i*window_len_avg+i_start:(i+1)*window_len_avg+i_start], window_len_avg*padding_fact)) * 2/window_len_avg
+    avg_rfft_mag[i] = abs(np.fft.rfft(ham*buff[i*window_len_avg+i_start:(i+1)*window_len_avg+i_start], window_len_avg*padding_fact)) * 4/window_len_avg
 
 dt = 1/Fs
 frequenies_index = frequencies/(Fs/(window_len_avg*padding_fact))
 freq_sig_noise = np.zeros([len(frequencies), len(avg_rfft_mag)])
 freq_sig_val = np.zeros([len(frequencies), len(avg_rfft_mag)])
 
-freq_max_middle = 0
-freq_tol = Fs/window_len_avg
-freq_diff = freq_tol*2/avg_freq_r[1]
+freq_tol = 1
 
 for index, f in enumerate(frequencies):
     for rfft_index in range(len(avg_rfft_mag)):
@@ -77,7 +75,7 @@ for index, f in enumerate(frequencies):
 
 print(len(avg_rfft_mag))
 freq_sig_val_thresh = np.zeros([len(frequencies), 1])
-threshold_per = 7.5
+threshold_per = 10
 for i in range(len(frequencies)):
     std = np.std(freq_sig_val[i])
     mean = np.mean(freq_sig_val[i])
@@ -105,7 +103,7 @@ rfft_mag = np.zeros([int((i_end-i_start)/window_len), fft_len])
 freq_r = np.fft.rfftfreq(window_len*padding_fact, 1/Fs)
 ham = np.hamming(window_len)
 for i in range(len(rfft_mag)):
-    rfft_mag[i] = abs(np.fft.rfft(ham*buff[i*window_len_avg+i_start:(i+1)*window_len+i_start], window_len*padding_fact)) * 2/window_len
+    rfft_mag[i] = abs(np.fft.rfft(ham*buff[i*window_len_avg+i_start:(i+1)*window_len+i_start], window_len*padding_fact)) * 4/window_len
 
 dt = 1/Fs
 frequenies_index = frequencies/(Fs/(window_len*padding_fact))
@@ -133,7 +131,7 @@ for index, f in enumerate(frequencies):
 for index, f in enumerate(frequencies):
     for rfft_index in range(len(rfft_mag)):
         try:
-            if freq_sig_val[index][rfft_index-1] == 0 and freq_sig_val[index][rfft_index+1] == 0:
+            if freq_sig_val[index][rfft_index] == 0 or freq_sig_val[index][rfft_index+1] == 0:
                 freq_sig_val[index][rfft_index] = 0
         except:
             pass

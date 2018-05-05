@@ -339,7 +339,7 @@ class BCI(object):
         # Signal threshold which is 10% or less probablitiy
         freq_sig_val_thresh = np.zeros([freq_array_len, 1])
         # Freq tolerance to check magnitude
-        freq_tol = fs / window_len
+        freq_tol = 0
         while True:
             # Read in data from pipe, pipe.recv blocks until data is received
             for i in range(int(window_len/recv_window_len)):

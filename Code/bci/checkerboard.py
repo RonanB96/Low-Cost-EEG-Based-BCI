@@ -5,18 +5,11 @@ import time
 tex = np.array([[1, -1], [-1, 1]])
 cycles = 7
 size = 512
-frequency = 20
+frequency = 5
 
 win = visual.Window([1024, 700], units='pix')
 stim = visual.GratingStim(win, tex=tex, size=size, units='pix',
                         sf=cycles / size, interpolate=False)
-
-
-def busy_wait(seconds):
-    c = time.clock()
-    while time.clock()-c < seconds:
-        pass
-
 
 frame_rate = win.getActualFrameRate()
 frame_interval = 1/frame_rate
