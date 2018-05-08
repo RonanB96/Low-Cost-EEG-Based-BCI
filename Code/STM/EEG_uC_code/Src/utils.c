@@ -11,7 +11,6 @@
 #include <string.h>
 
 #define PRINT_BUFFER_SIZE 		256
-#define UART_BLOCKING_TIMEOUT	200
 
 
 extern UART_HandleTypeDef huart1;

@@ -36,6 +36,9 @@
 #include "stm32f3xx_it.h"
 
 /* USER CODE BEGIN 0 */
+/* FILE DESCRIPTION 
+*
+*/
 
 /* USER CODE END 0 */
 
