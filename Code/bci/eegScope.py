@@ -1,3 +1,11 @@
+# eegScope.py
+# 
+# Receives analog data over serial port and plots the data
+# in real time along with a real time FFT
+# Author: Ronan Byrne
+# Last Updated: 09/05/2018
+#
+
 from pyqtgraph.Qt import QtCore, QtWidgets
 import pyqtgraph as pg
 import numpy as np

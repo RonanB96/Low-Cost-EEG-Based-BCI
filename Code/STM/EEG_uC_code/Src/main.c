@@ -41,9 +41,16 @@
 
 /* USER CODE BEGIN Includes */
 /*
- * FILE DESCRIPTION
- * Last Update = 27/04/2018
- * Written By Ronan Byrne
+ * main.c
+ *
+ * This code measures the output from a bioamplifier circuit
+ * and sends the values over to a PC over USART.
+ * On startup, the code waits for the PC to tell it to start.
+ *
+ * Created By STM32CubeMX
+ * Adapted By Ronan Byrne
+ * Last Updated = 09/05/2018
+ * 
  */
 
 #include <string.h>

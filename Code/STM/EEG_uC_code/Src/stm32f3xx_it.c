@@ -36,9 +36,15 @@
 #include "stm32f3xx_it.h"
 
 /* USER CODE BEGIN 0 */
-/* FILE DESCRIPTION 
-*
-*/
+/* 
+ * stm32f3xx_it.c
+ *
+ * Processes all interrupts
+ * 
+ * Created by STM32CubeMX
+ * Adapted by Ronan Byrne
+ * Last Updated 09/05/2018
+ */
 
 /* USER CODE END 0 */
 

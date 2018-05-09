@@ -1,3 +1,13 @@
+# eegInterface.py
+# 
+# Creates a keyboard made of flashing checkerboxes which can
+# selected by the user looking and concentrating on an individual box
+# A baseline is recorded for first 30s. The EEG data is compared against
+# the baseline data to determine if user if looking at a certain box
+# Author: Ronan Byrne
+# Last Updated: 09/05/2018
+#
+
 from psychopy import visual, event
 import numpy as np
 import scipy.stats as st
@@ -315,6 +325,7 @@ class BCI(object):
         self.selected_index = -1
 
     def pipeReceive(self):
+		# TODO receive initial parameters through pipe
         fft_padding = 5          # pad fft with 5 times the length
         window_len = 1000        # fft window size
         recv_window_len = 1000   # size of data sent through pipe
@@ -380,14 +391,12 @@ class BCI(object):
                     for i in range(freq_array_len):
                         std = np.std(freq_sig_base_val[i])
                         mean = np.mean(freq_sig_base_val[i])
-                        # Shape (u/s)^2
-                        g_a = (mean / std) ** 2
-                        # Scale (s^2)/u
-                        g_b = (std ** 2) / mean
                         # create a line from the min magnitude to 1.5 * max magnitude
                         x = np.linspace(min(freq_sig_base_val[i]), max(freq_sig_base_val[i]) * 1.5, 1000)
-                        # Calculate gamma cdf
-                        fitted_cdf = st.gamma.cdf(x, a=g_a, loc=1/g_b, scale=g_b)
+						# Calculate shape, scale and location of lognormal distribution
+						parameters_l = st.lognorm.fit(freq_sig_base_val[i])
+                        # Calculate lognormal cdf
+                        fitted_cdf = st.lognorm.cdf(x, parameters_l[0], parameters_l[1], parameters_l[2])
                         # Find the point on the cdf where the magnitude is less tha the cdf percent threshold
                         for j in range(len(x)):
                             if (1 - fitted_cdf[j]) < (cdf_per / 100.0):

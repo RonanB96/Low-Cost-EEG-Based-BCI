@@ -1,8 +1,9 @@
 /*
  * utils.c
- *
+ *	Various user created functions
  *  Created on: 3 Mar 2018
  *      Author: Ronan Byrne
+ *		Last Updated: 09/05/2018
  */
 
 #include "utils.h"

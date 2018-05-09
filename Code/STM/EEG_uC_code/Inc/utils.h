@@ -1,8 +1,9 @@
 /*
  * utils.h
- *	FILE DESCRIPTION
+ *	Header file for various user created functions
  *  Created on: 3 Mar 2018
  *      Author: Ronan Byrne
+ *		Last Updated: 09/05/2018
  */
 
 #ifndef UTILS_H_

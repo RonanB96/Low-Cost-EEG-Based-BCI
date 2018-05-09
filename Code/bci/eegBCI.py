@@ -1,3 +1,12 @@
+# eegBCI.py
+# 
+# Runs two scripts to receive EEG data from a microcontroller and 
+# to control a keyboard using the EEG data. A pipe is created to 
+# share data between the two scripts.
+# Author: Ronan Byrne
+# Last Updated: 09/05/2018
+#
+
 import multiprocessing
 import numpy as np
 import eegInterface
