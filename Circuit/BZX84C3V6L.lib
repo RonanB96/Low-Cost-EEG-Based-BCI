@@ -1,0 +1,1 @@
+.model BZX84C3V6L D(Is=1.5n Rs=2 Cjo=450p nbv=3 bv=3.6 Ibv=1m Vpk=3.6 mfg=OnSemi type=Zener)
