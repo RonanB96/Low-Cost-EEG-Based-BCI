@@ -1,11 +1,13 @@
 # EEG Measurement Circuit
 
-This folder contains the LTspice and a PDF of the circuit. 
+This folder contains the LTspice and a PDF of the circuits.
+The EEG_sch contains the EEG measuring circuit and the opt_iso_sch contains the serial optoisolation circuit
 
 ## Circuit Input
 Below shows theoretical values for the circuit
+
 | Value           | Minimum Gain  | Maximum Gain  |
-| ----------------|:-------------:| -------------:|
+|:----------------|:-------------:| -------------:|
 | Gain            | 51            | 25500         |
 | Input Max pk-pk | 29.4mV        | 58.82uV       |
 | Input resolution| 15.8uV        | 31.6nV        |
@@ -14,10 +16,10 @@ Below shows theoretical values for the circuit
 ## Frequency Response
 
 Simulated Driven right leg frequency to a common mode input of 200mV
-![Driven Right Leg Frequency Response](/drl_freq_response.png?raw=true)
+![Driven Right Leg Frequency Response](drl_freq_response.png?raw=true)
 
 Simulated Output of circuit to a differential input 50uV
-![Output Frequency Response](/output_freq_response.png?raw=true)
+![Output Frequency Response](output_freq_response.png?raw=true)
 
 ## The circuit can be used for other than EEG measurement
 
