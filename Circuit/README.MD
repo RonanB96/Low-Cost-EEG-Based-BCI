@@ -21,6 +21,12 @@ Simulated Driven right leg frequency to a common mode input of 200mV
 Simulated Output of circuit to a differential input 50uV
 ![Output Frequency Response](output_freq_response.png?raw=true)
 
+## Bill of Materials
+
+A bill of materials can be found in [BOM.ods](BOM.ods)
+Total cost of the circuit was €30.08. Cost per electrode was €0.70
+Extra channels can be added for €4.85 each as things should the DRL, Nucleo and optoisolation circuit can be reused
+
 ## The circuit can be used for other than EEG measurement
 
 The circuit has been tested measuring an ECG signal which gave a very clean signal. It could also be used for EOG and EMG but the a cut-off frequency of the anti-alias will need to be increased.

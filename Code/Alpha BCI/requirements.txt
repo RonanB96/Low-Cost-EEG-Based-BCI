@@ -1,5 +1,0 @@
-pyqtgraph==0.10.0
-PsychoPy==1.90.1
-numpy==1.14.0
-scipy==1.0.1
-pyserial==3.4
