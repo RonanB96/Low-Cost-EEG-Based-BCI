@@ -1,10 +1,14 @@
 # EEG Measurement Circuit
 
 This folder contains the LTspice and a PDF of the circuits.
-The EEG_sch contains the EEG measuring circuit and the opt_iso_sch contains the serial optoisolation circuit
+The EEG_sch files contains the EEG measuring circuit and the opt_iso_sch files contains the serial optoisolation circuit
+
+## LTspice simulation
+
+I've included some extra components and have the circuit setup to read them in automactically but I was not able to do this with the zener diode (BZX84C3V6L). To import this you'll need to copy the contents of BZX84C3V6L.lib to the end of LTspiceXVII/lib/cmp/standard.dio. Then it should work.
 
 ## Circuit Input
-Below shows theoretical values for the circuit
+Below shows theoretical values for the circuit.
 
 | Value           | Minimum Gain  | Maximum Gain  |
 |:----------------|:-------------:| -------------:|
@@ -23,8 +27,8 @@ Simulated Output of circuit to a differential input 50uV
 
 ## Bill of Materials
 
-A bill of materials can be found in [BOM.ods](BOM.ods)
-Total cost of the circuit was €30.08. Cost per electrode was €0.70
+A bill of materials can be found in [BOM.ods](BOM.ods).
+Total cost of the circuit was €30.08. Cost per electrode was €0.70.
 Extra channels can be added for €4.85 each as things should the DRL, Nucleo and optoisolation circuit can be reused
 
 ## The circuit can be used for other than EEG measurement

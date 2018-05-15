@@ -2,12 +2,12 @@
 
 The project uses a live EEG from the user to control a simplified keyboard using steady state visually evoked potentials.
 
-On start-up, the user should stare at one of the checker boxes to recorded a baseline EEG. Once the checkerboxes start flashing, the user can start making selections. There are five flashing checkerboxes, each flashing at a different frequency. Each box also has some comma separated options above them which can be selected
+On start-up, the user should stare at one of the checker boxes to record a baseline EEG. Once the checkerboxes start flashing, the user can start making selections. There are five flashing checkerboxes, each flashing at a different frequency. Each box also has some comma separated options above them, which can be selected
 By the user looking and concentrating on it. The box will be highlighted and the options sub-divided between the checker boxes. This repeats until a single option is selected. If the option is a letter/number it will be displayed in the text box.
 
 **The SSVEP BCI is not reliable right now**
 
-In the circuit folder is a ltspice schematic for a single channel EEG measuring circuit which is measured by a Nucleo F303K8. The value are sent
+In the circuit folder is a ltspice schematic for a single channel EEG measuring circuit which is measured by a Nucleo F303K8. The values are sent
 To the Brain computer interface which processes the data.
 
 A video overview of the circuit can be seen below  

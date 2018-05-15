@@ -1,3 +1,25 @@
-# Low Cost EEG Electrodes
+## Instructions to make electrodes
+### EEG Cup Electrode
+1. Remove the gel from an ECG pad electrode
+2. Cut out the center of an ECG pad electrode around the area of the gel 
+3. Apply superglue to the around area the electrodes
+4. Carefully place the rubber shower hose washer on the electrode and leave to dry
+5. (Optional) apply superglue to the top side of the cup (not on the metal)
+6. Wrap some multi stranded wire around one of the holes in the metal button snap and solder it  
+[Homemade EEG Cup Electrodes with button snap](diy_eeg_cup_electrode_and_ecg_pad2.jpg) 
 
-TODO
+### Ear Clip Electrode
+1. Follow the steps above for making the EEG Cup electrodes
+2. Drill a hole on one side of the clothes peg for the top of electrode to protrude
+3. Smooth down the inside of the peg so that the electrode can lie flat
+4. Wrap a stranded wire tightly around the top of the electrodes
+5. Apply a lot of solder to the wire to insure there is a good connection, I was not able to solder to the electrode directly
+6. Pull the wire through the peg hole and push the top of the electrode through the hole as well
+7. Glue the electrode in place
+8. Glue a second rubber shower hose washer to the other side of the peg to act as a cushion
+
+## Attaching the EEG Cup Electrodes
+1. I applied abrasive gel (Nuprep) to the area I was going to attach the electrode. This should reduce the electrode-skin impedance and should improve the signal quality. I haven't tested the signal quality without using the gel.
+2. Fill the EEG cup with gel (I used Signa conductive electrode gel).
+3. Place the electrode to the area you wish to measure.
+4. I held the electrodes in place with a swimming cap, but this can be difficult to do for multiple electrodes on different parts of the scalp.
