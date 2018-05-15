@@ -1,3 +1,14 @@
+# Low Cost EEG Electrodes
+
+EEG Cup electrodes can be very expensive (>€10 per lead) in terms of an low cost project, so I decided to make my own. I made mine using a standard ECG pad electrode, a rubber shower hose washer (inner diameter of 10mm) and a 13mm metal button snap. I also made some ear clips electrodes using the EEG cup electrodes and a clothes peg.
+
+Below is two of the DIY low cost EEG cups and a standard ECG Pad  
+![Homemade EEG Cup Electrodes and ECG Electrode Pad](diy_eeg_cup_electrode_and_ecg_pad.jpg?raw=true)
+
+Below are pictures of low cost ear clip electrodes using the same electrodes from above  
+![Homemade Ear Clip Electrode (Closed)](ear_clip_electrode_closed.jpg?raw=true)  
+![Homemade Ear Clip Electrode (Open)](ear_clip_electrode_open.jpg?raw=true)
+
 ## Instructions to make electrodes
 ### EEG Cup Electrode
 1. Remove the gel from an ECG pad electrode
@@ -6,7 +17,7 @@
 4. Carefully place the rubber shower hose washer on the electrode and leave to dry
 5. (Optional) apply superglue to the top side of the cup (not on the metal)
 6. Wrap some multi stranded wire around one of the holes in the metal button snap and solder it  
-[Homemade EEG Cup Electrodes with button snap](diy_eeg_cup_electrode_and_ecg_pad2.jpg) 
+![Homemade EEG Cup Electrodes with button snap](diy_eeg_cup_electrode2.jpg?raw=true) 
 
 ### Ear Clip Electrode
 1. Follow the steps above for making the EEG Cup electrodes
