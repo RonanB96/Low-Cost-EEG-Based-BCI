@@ -393,10 +393,10 @@ class BCI(object):
                         mean = np.mean(freq_sig_base_val[i])
                         # create a line from the min magnitude to 1.5 * max magnitude
                         x = np.linspace(min(freq_sig_base_val[i]), max(freq_sig_base_val[i]) * 1.5, 1000)
-                        # Calculate shape, scale and location of lognormal distribution
-                        parameters_l = st.lognorm.fit(freq_sig_base_val[i])
-                        # Calculate lognormal cdf
-                        fitted_cdf = st.lognorm.cdf(x, parameters_l[0], parameters_l[1], parameters_l[2])
+                        # Calculate shape, scale and location of gamma distribution
+                        parameters_l = st.gamma.fit(freq_sig_base_val[i])
+                        # Calculate gamma cdf
+                        fitted_cdf = st.gamma.cdf(x, parameters_l[0], parameters_l[1], parameters_l[2])
                         # Find the point on the cdf where the magnitude is less tha the cdf percent threshold
                         for j in range(len(x)):
                             if (1 - fitted_cdf[j]) < (cdf_per / 100.0):

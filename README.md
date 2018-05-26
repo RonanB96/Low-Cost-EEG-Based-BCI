@@ -64,3 +64,8 @@ This project is licensed under the Apache 2 License - see the [LICENSE.md](LICEN
 ## Acknowledgements
 
 * [Dr Ted Burke](https://batchloaf.wordpress.com/) for supervising the project and providing endless help and ideas
+
+## Disclaimer
+The designs for the EEG hardware and software shown in this repository have not been tested to comply with any medical device standards such as IEC 601. Therefore, any user which builds or uses the designs from this repository does so at their own risk. 
+
+As of writing, the BCI designs in this repository are not very reliable so the software/hardware should not be modified to control dangerous machinery or provide a valid means of communication.
