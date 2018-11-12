@@ -8,7 +8,7 @@ By the user looking and concentrating on it. The box will be highlighted and the
 **The SSVEP BCI is not reliable right now**
 
 In the circuit folder is a ltspice schematic for a single channel EEG measuring circuit which is measured by a Nucleo F303K8. The values are sent
-To the Brain computer interface which processes the data.
+to the brain-computer interface which processes the data.
 
 A video overview of the circuit can be seen below  
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=Ilv_VNvS42w
