@@ -11,11 +11,13 @@ In the circuit folder is a ltspice schematic for a single channel EEG measuring 
 to the brain-computer interface which processes the data.
 
 A video overview of the circuit can be seen below
+
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=Ilv_VNvS42w
 " target="_blank"><img src="http://img.youtube.com/vi/Ilv_VNvS42w/0.jpg" 
 alt="IMAGE ALT TEXT HERE" width="240" height="180" border="10" /></a>
 
 A simple Alpha wave BCI can be found in the Alpha BCI folder and a video demonstrating can be seen below
+
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=Ehdn_71upWc
 " target="_blank"><img src="http://img.youtube.com/vi/Ehdn_71upWc/0.jpg" 
 alt="IMAGE ALT TEXT HERE" width="240" height="180" border="10" /></a>
