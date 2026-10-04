@@ -3,7 +3,7 @@ import numpy as np
 
 
 path = '/home/ronan/Documents/EEG_csv/4_may/'
-file ='alpha_stim.csv'
+file ='12hz_checker.csv'
 buff = []
 n = 0
 Fs = 1000
@@ -29,7 +29,7 @@ NFFT = 4000     # the length of the windowing segments
 ax1 = plt.subplot(211)
 ax1.set_xlabel("Time (s)")
 ax1.set_ylabel("ADC value")
-ax1.set_title("ADC values and Frequency content from Alpha Wave Test")
+ax1.set_title("ADC values and Frequency content from Single 5Hz checker box test")
 plt.plot(t, buff[0:len(t)])
 ax2 = plt.subplot(212, sharex=ax1)
 ax2.set_ylabel("Frequency (Hz)")

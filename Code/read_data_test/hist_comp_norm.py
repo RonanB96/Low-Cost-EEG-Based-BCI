@@ -48,8 +48,8 @@ comp_mean = np.mean(stim_buff)
 print("freq {0}, normalised mean {1}, normalised std {2}".format(frequencies[comp_index], comp_mean, comp_std))
 
 x = np.linspace(min(no_stim_buff), max(no_stim_buff)*1.5, 1000)
-parameters_l = st.lognorm.fit(no_stim_buff)
-fitted_pdf_l = st.lognorm.pdf(x, s=parameters_l[0],loc=parameters_l[1], scale=parameters_l[2])
+parameters_l = st.gamma.fit(no_stim_buff)
+fitted_pdf_l = st.gamma.pdf(x, parameters_l[0],parameters_l[1], parameters_l[2])
 
 comp_x = np.linspace(min(stim_buff), max(stim_buff)*1.5, 1000)
 comp_parameters_l = st.chi.fit(stim_buff)
@@ -57,8 +57,8 @@ comp_fitted_pdf_l = st.chi.pdf(comp_x, comp_parameters_l[0],comp_parameters_l[1]
 plt.title("Probability Distribution of Magnitude at {}Hz".format(frequencies[comp_index]))
 plt.xlabel("Magnitude")
 plt.ylabel("Probability")
-plt.plot(x, fitted_pdf_l, "black", label="Fitted lognorm dist, no stimulus", linestyle="dashed", linewidth=2)
-plt.plot(comp_x, comp_fitted_pdf_l, "blue", label="Fitted chi dist, stimulus ", linestyle="dashed", linewidth=2)
+plt.plot(x, fitted_pdf_l, "black", label="Fitted gamma distribution, no stimulus", linestyle="dashed", linewidth=2)
+plt.plot(comp_x, comp_fitted_pdf_l, "blue", label="Fitted chi distribution, stimulus ", linestyle="dashed", linewidth=2)
 plt.legend()
 
 #fig1 = plt.figure()

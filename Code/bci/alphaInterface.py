@@ -354,7 +354,7 @@ class BCI(object):
         recv_window_len = 1000   # size of data sent through pipe
         fs = 1000
         cdf_per = 10.0           # 10% probability from cumulative density function
-        max_baseline_time = 10   # time to get baseline
+        max_baseline_time = 20   # time to get baseline
         max_baseline_count = int(max_baseline_time*fs/window_len)
 
         ham = np.hamming(window_len)

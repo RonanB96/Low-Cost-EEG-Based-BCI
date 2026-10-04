@@ -166,10 +166,6 @@ class Scope(object):
                 self.graph_head = (self.graph_head + 1) % self.graph_N
 
                 self.fft_sample_num += 1
-                # If we have enough samples for FFT
-                if self.fft_sample_num == self.fft_sample_size:
-                    self.fft_sample_num = 0
-                    self.calc()
 
     def update_plot(self):
         # Only update plot is data has been read
@@ -177,6 +173,11 @@ class Scope(object):
             self.graph_data_read = False
             # Set set new data to plot
             self.graph.setData(self.graph_time, self.graph_buff)
+            # If we have enough samples for FFT
+            if self.fft_sample_num >= self.fft_sample_size:
+                self.fft_sample_num = 0
+                self.calc()
+            self.app.processEvents()
 
     def calc(self):
         # store current buff so it doesn't changed as we're doing calculations

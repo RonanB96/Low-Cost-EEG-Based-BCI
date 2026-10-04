@@ -325,7 +325,7 @@ class BCI(object):
         self.selected_index = -1
 
     def pipeReceive(self):
-		# TODO receive initial parameters through pipe
+        # TODO receive initial parameters through pipe
         fft_padding = 5          # pad fft with 5 times the length
         window_len = 1000        # fft window size
         recv_window_len = 1000   # size of data sent through pipe
